@@ -1,0 +1,4 @@
+PLOTS/RIVERS/RIVERS.shp filter=lfs diff=lfs merge=lfs -text
+RESULTS/VALIDATION/VALIDATION.dbf filter=lfs diff=lfs merge=lfs -text
+RESULTS/RCI_MASTER/RCI_MASTER.dbf filter=lfs diff=lfs merge=lfs -text
+RESULTS/RCI_MASTER/RCI_MASTER.shp filter=lfs diff=lfs merge=lfs -text
