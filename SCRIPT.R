@@ -255,7 +255,7 @@ add_identity_edges <- function(ml) {
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # PREP DATA ####
 
-setwd("C:/Users/johannes_kowal/Desktop/NONA/OUTPUT/DANSER/DATA_R1")
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ## SC (WEIGHTS) ####
 
@@ -1254,1167 +1254,1220 @@ GRAPHS_CONCAT <- list(GRAPHS_CONCAT, c(1817, 1857, 1875, 1910, 1965, 1996, 2022)
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # ~~~~~~ ><{{{°> ~~~~~ ####
 # ~~~~~~~~~~~~~~~~~~~~ ####       
-# # CALCULATE INDICES ####       
-# ## CONFIGURATION PARAMETERS ####
-# 
-# PARAMS_MASTER <- tibble(DISP                   = c(rep("MDM", 4), rep("SDM", 4), rep("PD", 4)),
-#                         SC                     = rep(c("1", "2", "3", "4"), 3),
-#                         DIST                   = rep(c("DSC1", "DSC2", "DSC3", "DSC4"), 3),
-#                         nodes_id               = rep("name", 4*3),
-#                         index_type             = rep("full", 4*3),
-#                         dir_fragmentation_type = rep("asymmetric", 4*3),
-#                         pass_u                 = rep("pass_u", 4*3),
-#                         pass_d                 = rep("pass_d", 4*3),
-#                         B_ij_flag              = rep(TRUE, 4*3),
-#                         c_ij_flag              = rep(TRUE, 4*3),
-#                         dir_distance_type      = c(rep("symmetric", 8), rep("asymmetric", 4)),
-#                         disp_type              = c(rep("leptokurtic", 8), rep("exponential", 4)))
-# 
-# PARAMS_MASTER <- PARAMS_MASTER %>%
-#   rbind(PARAMS_MASTER %>% mutate(index_type = "reach")) %>%
-#   mutate(weight  = paste("WSC", SC, sep = ""),
-#          param_u = ifelse(DISP == "PD", 0, NA),
-#          param_d = ifelse(DISP == "PD", 0.05^(1/2000), NA),
-#          
-#          param_l = case_when(
-#            
-#            DISP == "PD" ~ NA,
-#            DISP == "MDM" ~ "2600, 74200, .5",
-#            DISP == "SDM" ~ "260, 7420, .5")
-#   )
-# 
-# ## NETWORK DISTANCES ####
-# ### CCI ####
-# 
-# PARAMS <- PARAMS_MASTER %>%
-#   filter(!(DISP == "MDM" &
-#              !SC %in% c(1,2)) &
-#            index_type == "full")
-# 
-# #### 1817 ####
-# 
-# INDICES_1817_LIST <- index_calculation_2(GRAPHS[[1]][[1]][-1], PARAMS, 1817)
-# gc()
-# 
-# INDICES_1817 <- do.call(rbind, lapply(INDICES_1817_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1817)
-# CCI_1817     <- INDICES_1817 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
-# 
-# #### 1857 ####
-# 
-# INDICES_1857_LIST <- index_calculation_2(GRAPHS[[1]][[2]][-1], PARAMS, 1857)
-# gc()
-# 
-# INDICES_1857 <- do.call(rbind, lapply(INDICES_1857_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1857)
-# CCI_1857     <- INDICES_1857 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
-# 
-# #### 1875 ####
-# 
-# INDICES_1875_LIST <- index_calculation_2(GRAPHS[[1]][[3]][-1], PARAMS, 1875)
-# gc()
-# 
-# INDICES_1875 <- do.call(rbind, lapply(INDICES_1875_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1875)
-# CCI_1875     <- INDICES_1875 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
-# 
-# #### 1910 ####
-# 
-# INDICES_1910_LIST <- index_calculation_2(GRAPHS[[1]][[4]][-1], PARAMS, 1910)
-# gc()
-# 
-# INDICES_1910 <- do.call(rbind, lapply(INDICES_1910_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1910)
-# CCI_1910     <- INDICES_1910 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
-# 
-# #### 1965 ####
-# 
-# INDICES_1965_LIST <- index_calculation_2(GRAPHS[[1]][[5]][-1], PARAMS, 1965)
-# gc()
-# 
-# INDICES_1965 <- do.call(rbind, lapply(INDICES_1965_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1965)
-# CCI_1965     <- INDICES_1965 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
-# 
-# #### 1996 ####
-# 
-# INDICES_1996_LIST <- index_calculation_2(GRAPHS[[1]][[6]][-1], PARAMS, 1996)
-# gc()
-# 
-# INDICES_1996 <- do.call(rbind, lapply(INDICES_1996_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1996)
-# CCI_1996     <- INDICES_1996 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
-# 
-# #### 2022 ####
-# 
-# INDICES_2022_LIST <- index_calculation_2(GRAPHS[[1]][[7]][-1], PARAMS, 2022)
-# gc()
-# 
-# INDICES_2022 <- do.call(rbind, lapply(INDICES_2022_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 2022)
-# CCI_2022     <- INDICES_2022 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
-# 
-# #### COMBINE YEARS ####
-# 
-# CCI <- rbind(
-#   CCI_1817,
-#   CCI_1857,
-#   CCI_1875,
-#   CCI_1910,
-#   CCI_1965,
-#   CCI_1996,
-#   CCI_2022
-# )
-# 
-# CCI_PROCESSED <- CCI %>%
-#   
-#   group_by(YEAR, CONF_ID) %>%
-#   summarise(num = sum(num),
-#             den = sum(den),
-#             across(names(PARAMS), first),
-#             .groups = "drop") %>%
-#   ungroup() %>%
-#   rename(NUM = num,
-#          DEN = den) %>%
-#   mutate(CCI = NUM/DEN) %>%
-#   dplyr::select(CCI, NUM, DEN, YEAR, CONF_ID, names(PARAMS)) %>%
-#   dplyr::select(-weight)
-# 
-# ### RCI ####
-# 
-# PARAMS <- PARAMS_MASTER %>%
-#   filter(!(DISP == "MDM" &
-#              !SC %in% c(1,2)) &
-#            index_type == "reach")
-# 
-# #### 1817 ####
-# 
-# INDICES_1817_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[1]][-1], PARAMS, 1817)
-# 
-# INDICES_1817_CONCAT <- do.call(rbind, lapply(INDICES_1817_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1817)
-# RCI_1817_CONCAT     <- INDICES_1817_CONCAT %>% filter(index_type == "reach")
-# 
-# #### 1857 ####
-# 
-# INDICES_1857_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[2]][-1], PARAMS, 1857)
-# 
-# INDICES_1857_CONCAT <- do.call(rbind, lapply(INDICES_1857_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1857)
-# RCI_1857_CONCAT     <- INDICES_1857_CONCAT %>% filter(index_type == "reach")
-# 
-# #### 1875 ####
-# 
-# INDICES_1875_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[3]][-1], PARAMS, 1875)
-# 
-# INDICES_1875_CONCAT <- do.call(rbind, lapply(INDICES_1875_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1875)
-# RCI_1875_CONCAT     <- INDICES_1875_CONCAT %>% filter(index_type == "reach")
-# 
-# #### 1910 ####
-# 
-# INDICES_1910_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[4]][-1], PARAMS, 1910)
-# 
-# INDICES_1910_CONCAT <- do.call(rbind, lapply(INDICES_1910_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1910)
-# RCI_1910_CONCAT     <- INDICES_1910_CONCAT %>% filter(index_type == "reach")
-# 
-# #### 1965 ####
-# 
-# INDICES_1965_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[5]][-1], PARAMS, 1965)
-# 
-# INDICES_1965_CONCAT <- do.call(rbind, lapply(INDICES_1965_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1965)
-# RCI_1965_CONCAT     <- INDICES_1965_CONCAT %>% filter(index_type == "reach")
-# 
-# #### 1996 ####
-# 
-# INDICES_1996_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[6]][-1], PARAMS, 1996)
-# 
-# INDICES_1996_CONCAT <- do.call(rbind, lapply(INDICES_1996_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1996)
-# RCI_1996_CONCAT     <- INDICES_1996_CONCAT %>% filter(index_type == "reach")
-# 
-# #### 2022 ####
-# 
-# INDICES_2022_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[7]][-1], PARAMS, 2022)
-# 
-# INDICES_2022_CONCAT <- do.call(rbind, lapply(INDICES_2022_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 2022)
-# RCI_2022_CONCAT     <- INDICES_2022_CONCAT %>% filter(index_type == "reach")
-# 
-# #### COMBINE YEARS ####
-# 
-# RCI_CONCAT <- rbind(
-#   RCI_1817_CONCAT,
-#   RCI_1857_CONCAT,
-#   RCI_1875_CONCAT,
-#   RCI_1910_CONCAT,
-#   RCI_1965_CONCAT,
-#   RCI_1996_CONCAT,
-#   RCI_2022_CONCAT
-# )
-# 
-# RCI_PROCESSED_CONCAT <- RCI_CONCAT %>%
-#   rename(DEN_G = den,
-#          FID = name,
-#          NUM = num)
-# 
-# RCI_DEN_CONCAT <- RCI_PROCESSED_CONCAT %>%
-#   
-#   group_by(YEAR, CONF_ID) %>% 
-#   summarise("DEN" = sum(DEN_G))
-# 
-# RCI_PROCESSED_CONCAT <- RCI_PROCESSED_CONCAT %>%
-#   left_join(RCI_DEN_CONCAT, by = c("YEAR", "CONF_ID")) %>%
-#   mutate(RCI = NUM/DEN) %>%
-#   dplyr::select(RCI, NUM, DEN, DEN_G, FID, ID_G, YEAR, CONF_ID, names(PARAMS))
-# 
-# CONCAT_KEY <- tibble(
-#   YEAR     = c(1817, 1857, 1875, 1910, 1965, 1996, 2022),
-#   NR_NODES = c(nrow(NODES_1817), nrow(NODES_1857), nrow(NODES_1875), nrow(NODES_1910),
-#                nrow(NODES_1965), nrow(NODES_1996), nrow(NODES_2022))
-# )
-# 
-# RCI_PROCESSED_CONCAT <- RCI_PROCESSED_CONCAT %>%
-#   left_join(CONCAT_KEY, by = "YEAR") %>%
-#   mutate(FID = as.numeric(FID)) %>%
-#   filter(FID <= NR_NODES-1)
-# 
-# WEIGHTS <- rbind(
-#   NODE_WEIGHTS_1817 %>% mutate(YEAR = 1817),
-#   NODE_WEIGHTS_1857 %>% mutate(YEAR = 1857),
-#   NODE_WEIGHTS_1875 %>% mutate(YEAR = 1875),
-#   NODE_WEIGHTS_1910 %>% mutate(YEAR = 1910),
-#   NODE_WEIGHTS_1965 %>% mutate(YEAR = 1965),
-#   NODE_WEIGHTS_1996 %>% mutate(YEAR = 1996),
-#   NODE_WEIGHTS_2022 %>% mutate(YEAR = 2022)
-# ) %>%
-#   dplyr::select(-contains("DSC")) %>%
-#   pivot_longer(cols = c("WSC1", "WSC2", "WSC3", "WSC4"), 
-#                names_to = "SC", 
-#                values_to = "WEIGHT") %>%
-#   mutate(name = as.numeric(name),
-#          SC = str_sub(SC, -1)) %>%
-#   rename(FID = name) %>%
-#   
-#   left_join(rbind(
-#     NODES_1817 %>% mutate(YEAR = 1817, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
-#     NODES_1857 %>% mutate(YEAR = 1857, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
-#     NODES_1875 %>% mutate(YEAR = 1875, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
-#     NODES_1910 %>% mutate(YEAR = 1910, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
-#     NODES_1965 %>% mutate(YEAR = 1965, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
-#     NODES_1996 %>% mutate(YEAR = 1996, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
-#     NODES_2022 %>% mutate(YEAR = 2022, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE)
-#   ), by = c("FID", "YEAR")) %>%
-#   dplyr::relocate(geometry, .after = last_col())
-# 
-# RCI_PROCESSED_CONCAT <- RCI_PROCESSED_CONCAT %>%
-#   
-#   dplyr::select(-contains(c("flag", "pass", "index_type", "nodes_id", "dir", "param", "disp_type", "weight", "NR_NODES"))) %>%
-#   left_join(WEIGHTS, by = c("FID", "YEAR", "SC")) %>%
-#   st_as_sf() %>%
-#   mutate(ID = row_number()) %>%
-#   dplyr::select(ID, everything())
-# 
-# ## EUCLIDEAN DISTANCES ####
-# ### RCI ####
-# #### 1817 ####
-# 
-# NODE_1817_CENTROID <- NODES_1817 %>%
-#   st_line_sample(sample = 0.5) %>%
-#   st_cast("POINT") %>%      
-#   st_as_sf() %>%
-#   cbind(NODES_1817 %>% st_drop_geometry()) %>%
-#   left_join(NODE_WEIGHTS_1817, by = c("FID" = "name")) %>%
-#   rename(geometry = x) %>%
-#   st_as_sf()
-# 
-# COORDS        <- st_coordinates(NODE_1817_CENTROID)
-# DIST_MAT      <- as.matrix(dist(COORDS))
-# WEIGHTS       <- paste0("WSC", 1:4)
-# TR            <- 2e+3
-# KERNEL_FACTOR <- 0.05^(1/TR)
-# 
-# for (w in WEIGHTS) {
-#   cat("Processing", w, "\n")
-#   W_VALS <- NODE_1817_CENTROID[[w]]
-#   diag(DIST_MAT) <- NA
-#   NODE_1817_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
-# }
-# 
-# EUC_1817 <- NODE_1817_CENTROID %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(FID, starts_with("RCI")) %>%
-#   mutate(YEAR = 1817) %>%
-#   relocate(YEAR, .after = FID)
-# 
-# #### 1857 ####
-# 
-# NODE_1857_CENTROID <- NODES_1857 %>%
-#   st_line_sample(sample = 0.5) %>%
-#   st_cast("POINT") %>%      
-#   st_as_sf() %>%
-#   cbind(NODES_1857 %>% st_drop_geometry()) %>%
-#   left_join(NODE_WEIGHTS_1857, by = c("FID" = "name")) %>%
-#   rename(geometry = x) %>%
-#   st_as_sf()
-# 
-# COORDS        <- st_coordinates(NODE_1857_CENTROID)
-# DIST_MAT      <- as.matrix(dist(COORDS))
-# WEIGHTS       <- paste0("WSC", 1:4)
-# TR            <- 2e+3
-# KERNEL_FACTOR <- 0.05^(1/TR)
-# 
-# for (w in WEIGHTS) {
-#   cat("Processing", w, "\n")
-#   W_VALS <- NODE_1857_CENTROID[[w]]
-#   diag(DIST_MAT) <- NA
-#   NODE_1857_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
-# }
-# 
-# EUC_1857 <- NODE_1857_CENTROID %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(FID, starts_with("RCI")) %>%
-#   mutate(YEAR = 1857) %>%
-#   relocate(YEAR, .after = FID)
-# 
-# #### 1875 ####
-# 
-# NODE_1875_CENTROID <- NODES_1875 %>%
-#   st_line_sample(sample = 0.5) %>%
-#   st_cast("POINT") %>%      
-#   st_as_sf() %>%
-#   cbind(NODES_1875 %>% st_drop_geometry()) %>%
-#   left_join(NODE_WEIGHTS_1875, by = c("FID" = "name")) %>%
-#   rename(geometry = x) %>%
-#   st_as_sf()
-# 
-# COORDS        <- st_coordinates(NODE_1875_CENTROID)
-# DIST_MAT      <- as.matrix(dist(COORDS))
-# WEIGHTS       <- paste0("WSC", 1:4)
-# TR            <- 2e+3
-# KERNEL_FACTOR <- 0.05^(1/TR)
-# 
-# for (w in WEIGHTS) {
-#   cat("Processing", w, "\n")
-#   W_VALS <- NODE_1875_CENTROID[[w]]
-#   diag(DIST_MAT) <- NA
-#   NODE_1875_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
-# }
-# 
-# EUC_1875 <- NODE_1875_CENTROID %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(FID, starts_with("RCI")) %>%
-#   mutate(YEAR = 1875) %>%
-#   relocate(YEAR, .after = FID)
-# 
-# #### 1910 ####
-# 
-# NODE_1910_CENTROID <- NODES_1910 %>%
-#   st_line_sample(sample = 0.5) %>%
-#   st_cast("POINT") %>%      
-#   st_as_sf() %>%
-#   cbind(NODES_1910 %>% st_drop_geometry()) %>%
-#   left_join(NODE_WEIGHTS_1910, by = c("FID" = "name")) %>%
-#   rename(geometry = x) %>%
-#   st_as_sf()
-# 
-# COORDS        <- st_coordinates(NODE_1910_CENTROID)
-# DIST_MAT      <- as.matrix(dist(COORDS))
-# WEIGHTS       <- paste0("WSC", 1:4)
-# TR            <- 2e+3
-# KERNEL_FACTOR <- 0.05^(1/TR)
-# 
-# for (w in WEIGHTS) {
-#   cat("Processing", w, "\n")
-#   W_VALS <- NODE_1910_CENTROID[[w]]
-#   diag(DIST_MAT) <- NA
-#   NODE_1910_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
-# }
-# 
-# EUC_1910 <- NODE_1910_CENTROID %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(FID, starts_with("RCI")) %>%
-#   mutate(YEAR = 1910) %>%
-#   relocate(YEAR, .after = FID)
-# 
-# #### 1965 ####
-# 
-# NODE_1965_CENTROID <- NODES_1965 %>%
-#   st_line_sample(sample = 0.5) %>%
-#   st_cast("POINT") %>%      
-#   st_as_sf() %>%
-#   cbind(NODES_1965 %>% st_drop_geometry()) %>%
-#   left_join(NODE_WEIGHTS_1965, by = c("FID" = "name")) %>%
-#   rename(geometry = x) %>%
-#   st_as_sf()
-# 
-# COORDS        <- st_coordinates(NODE_1965_CENTROID)
-# DIST_MAT      <- as.matrix(dist(COORDS))
-# WEIGHTS       <- paste0("WSC", 1:4)
-# TR            <- 2e+3
-# KERNEL_FACTOR <- 0.05^(1/TR)
-# 
-# for (w in WEIGHTS) {
-#   cat("Processing", w, "\n")
-#   W_VALS <- NODE_1965_CENTROID[[w]]
-#   diag(DIST_MAT) <- NA
-#   NODE_1965_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
-# }
-# 
-# EUC_1965 <- NODE_1965_CENTROID %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(FID, starts_with("RCI")) %>%
-#   mutate(YEAR = 1965) %>%
-#   relocate(YEAR, .after = FID)
-# 
-# #### 1996 ####
-# 
-# NODE_1996_CENTROID <- NODES_1996 %>%
-#   st_line_sample(sample = 0.5) %>%
-#   st_cast("POINT") %>%      
-#   st_as_sf() %>%
-#   cbind(NODES_1996 %>% st_drop_geometry()) %>%
-#   left_join(NODE_WEIGHTS_1996, by = c("FID" = "name")) %>%
-#   rename(geometry = x) %>%
-#   st_as_sf()
-# 
-# COORDS        <- st_coordinates(NODE_1996_CENTROID)
-# DIST_MAT      <- as.matrix(dist(COORDS))
-# WEIGHTS       <- paste0("WSC", 1:4)
-# TR            <- 2e+3
-# KERNEL_FACTOR <- 0.05^(1/TR)
-# 
-# for (w in WEIGHTS) {
-#   cat("Processing", w, "\n")
-#   W_VALS <- NODE_1996_CENTROID[[w]]
-#   diag(DIST_MAT) <- NA
-#   NODE_1996_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
-# }
-# 
-# EUC_1996 <- NODE_1996_CENTROID %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(FID, starts_with("RCI")) %>%
-#   mutate(YEAR = 1996) %>%
-#   relocate(YEAR, .after = FID)
-# 
-# #### 2022 ####
-# 
-# NODE_2022_CENTROID <- NODES_2022 %>%
-#   st_line_sample(sample = 0.5) %>%
-#   st_cast("POINT") %>%      
-#   st_as_sf() %>%
-#   cbind(NODES_2022 %>% st_drop_geometry()) %>%
-#   left_join(NODE_WEIGHTS_2022, by = c("FID" = "name")) %>%
-#   rename(geometry = x) %>%
-#   st_as_sf()
-# 
-# COORDS        <- st_coordinates(NODE_2022_CENTROID)
-# DIST_MAT      <- as.matrix(dist(COORDS))
-# WEIGHTS       <- paste0("WSC", 1:4)
-# TR            <- 2e+3
-# KERNEL_FACTOR <- 0.05^(1/TR)
-# 
-# for (w in WEIGHTS) {
-#   cat("Processing", w, "\n")
-#   W_VALS <- NODE_2022_CENTROID[[w]]
-#   diag(DIST_MAT) <- NA
-#   NODE_2022_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
-# }
-# 
-# EUC_2022 <- NODE_2022_CENTROID %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(FID, starts_with("RCI")) %>%
-#   mutate(YEAR = 2022) %>%
-#   relocate(YEAR, .after = FID)
-# 
-# #### COMBINE YEARS ####
-# 
-# RCI_EUC <- rbind(
-#   
-#   EUC_1817,
-#   EUC_1857,
-#   EUC_1875,
-#   EUC_1910,
-#   EUC_1965,
-#   EUC_1996,
-#   EUC_2022
-#   
-# ) %>%
-#   
-#   set_names(c("FID", "YEAR", c(1:4))) %>%
-#   pivot_longer(cols = as.character(c(1:4)), names_to = "SC", values_to = "NUM")
-# 
-# ### CCI ####
-# 
-# CCI_EUC <- list()
-# 
-# for (year in c(1817, 1857, 1875, 1910, 1965, 1996, 2022)) {
-#   
-#   cat("Processing year:", year, "\n")
-#   
-#   NODE_CENTROID <- get(paste0("NODE_", year, "_CENTROID"))
-#   COORDS        <- st_coordinates(NODE_CENTROID)
-#   DIST_MATRIX   <- as.matrix(dist(COORDS))
-#   KERNEL_FACTOR <- 0.05^(1/TR)
-#   
-#   CCI_EUC_WIDE <- RCI_EUC %>%
-#     filter(YEAR == year) %>%
-#     mutate(SC = paste0("SC", SC)) %>%
-#     pivot_wider(names_from = SC, values_from = NUM)
-#   
-#   for (sc in paste0("SC", 1:4)) {
-#     
-#     cat("Processing: ", sc, "\n")
-#     
-#     W <- CCI_EUC_WIDE[[sc]]
-#     CCI_VAL <- sum(outer(W, W) * (KERNEL_FACTOR^DIST_MATRIX))
-#     CCI_EUC[[paste0("CCI_", sc, "_", year)]] <- data.frame(
-#       YEAR = year,
-#       SC = sc,
-#       NUM = CCI_VAL
-#     )
-#   }
-# }
-# 
-# CCI_EUC <- do.call(rbind, CCI_EUC)
-# 
-# ## RCI MASTER TABLE ####
-# 
-# RCI_EUC_TEMP <- RCI_PROCESSED_CONCAT %>%
-#   filter(DISP == "PD") %>%
-#   mutate(DISP =  "EUC",
-#          ID             = row_number() + nrow(RCI_PROCESSED_CONCAT)) %>%
-#   mutate(CONF_ID = case_when(
-#     
-#     SC == 1 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 1,
-#     SC == 2 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 2,
-#     SC == 3 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 3,
-#     SC == 4 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 4
-#     
-#   )) %>%
-#   dplyr::select(-RCI, -NUM) %>%
-#   left_join(RCI_EUC %>% mutate(FID = as.numeric(FID)), by = c("FID", "YEAR", "SC")) %>%
-#   mutate(RCI = NUM/DEN) %>%
-#   dplyr::select(ID, RCI, NUM, everything())
-# 
-# RCI_MASTER <- RCI_PROCESSED_CONCAT %>%
-#   rbind(RCI_EUC_TEMP) %>%
-#   st_as_sf() %>%
-#   dplyr::select(-DIST)
-# 
-# ## CCI MASTER TABLE ####
-# 
-# CCI_NET <- CCI_PROCESSED %>%
-#   dplyr::select(CCI, intersect(names(CCI_PROCESSED), names(RCI_MASTER)))
-# 
-# CCI_EUC <- CCI_NET %>%
-#   filter(DISP == "PD") %>%
-#   mutate(DISP = "EUC") %>%
-#   mutate(CONF_ID = case_when(
-#     
-#     SC == 1 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 1,
-#     SC == 2 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 2,
-#     SC == 3 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 3,
-#     SC == 4 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 4
-#     
-#   )) %>%
-#   dplyr::select(-CCI, -NUM) %>%
-#   left_join(CCI_EUC %>%
-#               mutate(SC = str_sub(SC, -1, -1)), by = c("YEAR", "SC")) %>%
-#   mutate(CCI = NUM/DEN) %>%
-#   dplyr::select(CCI, NUM, everything())
-# 
-# CCI_MASTER <- CCI_NET %>%
-#   rbind(CCI_EUC) %>%
-#   mutate(ID = row_number()) %>%
-#   relocate(ID, .before = CCI) %>%
-#   dplyr::select(-DIST)
-#
-# # ~~~~~~~~~~~~~~~~~~~~ ####
-# # ~~~~~~ ><{{{°> ~~~~~ ####
-# # ~~~~~~~~~~~~~~~~~~~~ ####
-# # VALIDATION ####
-# 
-# RCI_MASTER_2022 <- RCI_MASTER %>%
-#   filter(YEAR == 2022 & WB_TYPE != "CO")
-# 
-# VALIDATION <- SAMPLES %>%
-#   left_join(SC_TAXA %>%
-#               dplyr::select(-ID_TAXA, -DISP, -GROUP), by = c("GENUS", "SPECIES")) %>%
-#   filter(ERROR_CUM <= 5 & ERROR_MAX <= 2) %>%
-#   filter(SC != 5) %>%
-#   st_join(RCI_MASTER_2022 %>%
-#             dplyr::select(FID, geometry) %>%
-#             unique() %>%
-#             rename(FID_RCI = FID), join = st_nearest_feature) %>%
-#   relocate(FID_RCI, .after = ID_SMPL) %>%
-#   left_join(RCI_MASTER_2022 %>%
-#               st_drop_geometry() %>%
-#               rename(FID_RCI = FID) %>%
-#               mutate(SC = as.numeric(SC)) %>%
-#               dplyr::select(FID_RCI, SC, WEIGHT, DISP, WB_TYPE, RCI, NUM, DEN),
-#             by = c("FID_RCI", "SC", "DISP")) %>%
-#   relocate(geometry, .after = last_col()) %>%
-#   mutate(PRES = ifelse(PRES == 1, "Present", "Absent")) %>%
-#   mutate(SC   = factor(SC, levels = c(1:4)),
-#          PRES = factor(PRES, levels = rev(c("Absent", "Present"))),
-#          DISP = factor(DISP, levels = c("EUC", "PD", "SDM", "MDM"))) %>%
-#   group_by(DISP, SC) %>%
-#   mutate(NUM = scales::rescale(NUM),
-#          RCI = scales::rescale(RCI))
-# 
-# SIGNIFICANCE <- VALIDATION %>%
-#   st_drop_geometry() %>%
-#   dplyr::select(NUM, DISP, SC, PRES) %>%
-#   drop_na() %>%
-#   mutate(NUM = as.numeric(NUM)) %>%
-#   group_by(DISP, SC, PRES) %>%
-#   mutate(GROUP_SIZE = n()) %>%
-#   ungroup()
-# 
-# GROUP_SIZES <- SIGNIFICANCE %>%
-#   group_by(DISP, SC, PRES) %>%
-#   summarise(N = n(), .groups = "drop") %>%
-#   pivot_wider(names_from = PRES, values_from = N, names_prefix = "N_", values_fill = 0)
-# 
-# set.seed(42)
-# SIGNIFICANCE <- SIGNIFICANCE %>%
-#   group_by(DISP, SC) %>%
-#   mutate(MIN_SIZE = min(GROUP_SIZE)) %>%
-#   ungroup() %>%
-#   group_by(DISP, SC, PRES) %>%
-#   group_modify(~ slice_sample(.x, n = .x$MIN_SIZE[1])) %>%
-#   ungroup() %>%
-#   group_by(DISP, SC) %>%
-#   summarise(test = list(wilcox.test(NUM ~ PRES, alternative = "greater", exact = FALSE) %>% broom::tidy()), .groups = "drop") %>%
-#   unnest(test) %>%
-#   dplyr::select(DISP, SC, p.value) %>%
-#   mutate(LEVEL = case_when(
-#     p.value < 0.001 ~ "***",
-#     p.value <= 0.01 ~ "**",
-#     p.value <= 0.05 ~ "*",
-#     p.value <= 0.1 ~ " ",
-#     TRUE ~ " "
-#   )) %>%
-#   rename(P = p.value) %>%
-#   left_join(GROUP_SIZES, by = c("DISP", "SC"))
-# 
-# write_csv(SIGNIFICANCE, "./RESULTS/SIGNIFICANCE.csv")
-# st_write(VALIDATION, "./RESULTS/VALIDATION/VALIDATION.shp", append = FALSE)
-# 
-# # ~~~~~~~~~~~~~~~~~~~~ ####
-# # ~~~~~~ ><{{{°> ~~~~~ ####
-# # ~~~~~~~~~~~~~~~~~~~~ ####
-# # CC (CLUSTERS) ####
-# 
-# RCI_CLUSTER <- RCI_MASTER %>%
-#   st_drop_geometry() %>%
-#   filter(WB_TYPE != "CO") %>%
-#   dplyr::select(FID, YEAR, NUM, DISP, SC) %>%
-#   left_join(SIGNIFICANCE %>% dplyr::select(-LEVEL, -starts_with("N")),
-#             by = c("DISP", "SC")) %>%
-#   filter(P < .05) %>%
-#   dplyr::select(-P) %>%
-#   group_by(YEAR, FID) %>%
-#   mutate(SC = paste0("SC", SC)) %>%
-#   pivot_wider(names_from = c("SC", "DISP"),
-#               values_from = NUM) %>%
-#   ungroup() %>%
-#   mutate(ID = row_number()) %>%
-#   dplyr::select(ID, everything())
-# 
-# COR                 <- cor(RCI_CLUSTER %>% dplyr::select(starts_with("SC")), method = "kendall")
-# COR[abs(COR) <= .7] <- "ok"
-# diag(COR)           <- "ok"
-# REDUNDANT           <- c()
-# COR
-# 
-# REDUNDANT          <- c("SC3_PD")
-# REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
-# COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
-# COR
-# 
-# REDUNDANT          <- c(REDUNDANT, c("SC1_PD"))
-# REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
-# COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
-# COR
-# 
-# REDUNDANT          <- c(REDUNDANT, c("SC1_SDM"))
-# REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
-# COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
-# COR
-# 
-# REDUNDANT          <- c(REDUNDANT, c("SC4_PD"))
-# REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
-# COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
-# COR
-# 
-# REDUNDANT          <- c(REDUNDANT, c("SC3_SDM"))
-# REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
-# COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
-# COR
-# 
-# K_WSS_CC <- fviz_nbclust(RCI_CLUSTER %>%
-#                            dplyr::select(-FID, -YEAR, -contains(REDUNDANT)) %>%
-#                            column_to_rownames("ID") %>%
-#                            mutate(across(everything(), ~ scale(.x))) %>%
-#                            mutate(across(everything(), ~ log(.x+2))),
-#                          FUNcluster = cluster::clara,
-#                          method = "wss",
-#                          k.max = 10,
-#                          nboot = 25,
-#                          verbose = TRUE)
-# 
-# K_WSS_CC <- K_WSS_CC$data %>% as_tibble() %>% rename(K = clusters, WSS = y)
-# 
-# write_csv(K_WSS_CC, "./RESULTS/K_WSS_CC.csv")
-# 
-# CC <- cluster::clara(RCI_CLUSTER %>%
-#                        dplyr::select(-FID, -YEAR, -contains(REDUNDANT)) %>%
-#                        column_to_rownames("ID") %>%
-#                        mutate(across(everything(), ~ scale(.x))) %>%
-#                        mutate(across(everything(), ~ log(.x+2))),
-#                      k = 4)
-# 
-# RCI_MASTER <- RCI_MASTER %>%
-#   left_join(RCI_CLUSTER %>%
-#               dplyr::select(FID, YEAR) %>%
-#               cbind(CC = CC$clustering),
-#             by = c("FID", "YEAR")) %>%
-#   relocate(CC, .after = SC) %>%
-#   mutate(CC = factor(CC, levels = c(1,2,3,4)))
-# 
-# CLUSTER_VARIABLES <- RCI_CLUSTER %>%
-#   dplyr::select(starts_with("SC") & !all_of(REDUNDANT)) %>%
-#   names()
-# 
-# CLUSTER_VARIABLES <- tibble(TEMP = CLUSTER_VARIABLES) %>%
-#   separate(TEMP, into = c("SC", "DISP"), sep = "_") %>%
-#   mutate(SC    = str_sub(SC, -1, -1),
-#          LABEL = "(Clustering variable)")
-# 
-# st_write(RCI_MASTER, "./RESULTS/RCI_MASTER/RCI_MASTER.shp", append = FALSE)
-# write_csv(CLUSTER_VARIABLES, "./RESULTS/CLUSTER_VARIABLES.csv")
-# 
-# # ~~~~~~~~~~~~~~~~~~~~ ####
-# # ~~~~~~ ><{{{°> ~~~~~ ####
-# # ~~~~~~~~~~~~~~~~~~~~ ####
-# # RESILIENCE ####
+# CALCULATE INDICES ####
+## CONFIGURATION PARAMETERS ####
 
-# ## MULTILAYER GRAPHS ####
-# 
-# LAYERS  <- list()
-# YEARS   <- as.character(c(1817, 1857, 1875, 1910, 1965, 1996, 2022))
-# 
-# DISP    <- c("EUC", "PD", "SDM", "MDM")
-# SC      <- c("SC1", "SC2", "SC3", "SC4")
-# 
-# CONFIGS <- tidyr::crossing(DISP, SC) %>%
-#   unite("CONFIGS", DISP, SC, sep = "_") %>%
-#   filter(!CONFIGS %in% c("MDM_SC3", "MDM_SC4", "SDM_SC4")) %>%
-#   pull(CONFIGS)
-# 
-# MULTI_GRAPHS <- list()
-# EDGE_WEIGHTS <- tibble(YEAR = numeric(), CONF = character(), TYPE = character(), MEAN = numeric())
-# 
-# GRAPHS_SINGLE <- list(
-#   
-#   "1817" = GRAPH_1817,
-#   "1857" = GRAPH_1857,
-#   "1875" = GRAPH_1875,
-#   "1910" = GRAPH_1910,
-#   "1965" = GRAPH_1965,
-#   "1996" = GRAPH_1996,
-#   "2022" = GRAPH_2022
-#   
-# )
-# 
-# NODES  <- list(
-#   
-#   "1817" = NODES_1817,
-#   "1857" = NODES_1857,
-#   "1875" = NODES_1875,
-#   "1910" = NODES_1910,
-#   "1965" = NODES_1965,
-#   "1996" = NODES_1996,
-#   "2022" = NODES_2022
-#   
-# )
-# 
-# RCI_LIM <- RCI_MASTER %>%
-#   st_drop_geometry() %>%
-#   filter(WB_TYPE!= "CO") %>%
-#   dplyr::select(FID, YEAR, SC, DISP, NUM) %>%
-#   mutate(SC = paste0("SC", SC)) %>%
-#   mutate(CONFIG = paste(DISP, SC, sep = "_")) %>%
-#   group_by(CONFIG) %>%
-#   summarise(RCI_MAX = max(NUM, na.rm = TRUE), .groups = "drop")
-# 
-# DIST_LIM <- tibble(CONFIG = character(), DIST_MAX = numeric())
-# 
-# for (conf in CONFIGS) {
-#   
-#   GLOBAL_MAX <- 0
-#   
-#   for (year in YEARS) {
-#     
-#     G <- GRAPHS_SINGLE[[year]]
-#     
-#     CONF     <- str_split(conf, "_")[[1]][2]
-#     CONF_INT <- sub(".*(.)$", "\\1", CONF)
-#     CONF_LAB <- paste("DSC", CONF_INT, sep = "")
-#     
-#     EDGE_NODES <- ends(G, E(G), names = FALSE)
-#     
-#     VERTEX_ATTR <- vertex_attr(G, CONF_LAB)
-#     
-#     WEIGHT <- (0.5 * VERTEX_ATTR[EDGE_NODES[, 1]] + 0.5 * VERTEX_ATTR[EDGE_NODES[, 2]])
-#     
-#     YEAR_MAX <- max(WEIGHT, na.rm = TRUE)
-#     
-#     if (YEAR_MAX > GLOBAL_MAX) {
-#       GLOBAL_MAX <- YEAR_MAX
-#     }
-#     
-#   }
-#   
-#   DIST_LIM <- rbind(DIST_LIM, tibble(CONFIG = conf, DIST_MAX = GLOBAL_MAX))
-#   
-# }
-# 
-# for (year in 1:length(YEARS)) {
-#   
-#   cat("Preparing layers for ", YEARS[year], "\n")
-#   LAYERS[[year]] <- list()
-#   
-#   for (conf in 1:length(CONFIGS)) {
-#     
-#     LAYERS[[year]][[conf]] <- list()
-#     CONF                   <- str_split(CONFIGS[conf], pattern = "_")[[1]][2]
-#     CONF_INT               <- sub(".*(.)$", "\\1", CONF)
-#     CONF_LAB               <- paste("DSC", CONF_INT, sep = "")
-#     G                      <- GRAPHS_SINGLE[[YEARS[year]]]
-#     
-#     for(att in setdiff(vertex_attr_names(G), c("name", CONF_LAB))) {
-#       G <- delete_vertex_attr(G, att)
-#     }
-#     
-#     for (att in edge_attr_names(G)) {
-#       G <- delete_edge_attr(G, att)
-#     }
-#     
-#     RCI_MASTER_TEMP <- RCI_MASTER %>%
-#       st_drop_geometry() %>%
-#       dplyr::select(FID, YEAR, SC, CC, DISP, NUM) %>%
-#       mutate(SC     = paste0("SC", SC),
-#              CONFIG = CONFIGS[conf],
-#              CC     = ifelse(is.na(CC), 5, CC)) %>%
-#       filter(
-#         YEAR == YEARS[year],
-#         DISP == str_split(CONFIGS[conf], "_")[[1]][1],
-#         SC   == str_split(CONFIGS[conf], "_")[[1]][2]
-#       )
-#     
-#     VERTEX_ATTR <- vertex_attr(G) %>%
-#       as_tibble() %>%
-#       left_join(RCI_MASTER_TEMP %>% mutate(FID = as.character(FID)), by = c("name" = "FID")) %>%
-#       dplyr::select(-name)
-#     
-#     EDGE_NODES <- ends(G, E(G), names = FALSE)
-#     WEIGHT     <- (0.5 * dplyr::pull(VERTEX_ATTR, 1)[EDGE_NODES[, 1]] + 0.5 * dplyr::pull(VERTEX_ATTR, 1)[EDGE_NODES[, 2]])
-#     
-#     CONFIG                      <- CONFIGS[conf]
-#     
-#     RCI_LIM_CURR                <- RCI_LIM %>% filter(CONFIG == CONFIGS[conf])
-#     RCI                         <- VERTEX_ATTR$NUM
-#     RCI_S                       <- VERTEX_ATTR$NUM / RCI_LIM_CURR$RCI_MAX
-#     CC                          <- VERTEX_ATTR$CC
-#     G                           <- set_vertex_attr(G, name = "RCI", value = RCI)
-#     G                           <- set_vertex_attr(G, name = "RCI_S", value = RCI_S)
-#     G                           <- set_vertex_attr(G, name = "CC", value = CC)
-#     
-#     WEIGHT_LIM_CURR             <- DIST_LIM %>% filter(CONFIG == CONFIGS[conf])
-#     WEIGHT_S                    <- WEIGHT / WEIGHT_LIM_CURR$DIST_MAX
-#     G                           <- set_edge_attr(G, name = "WEIGHT", value = WEIGHT)
-#     G                           <- set_edge_attr(G, name = "WEIGHT_S", value = WEIGHT_S)
-#     
-#     G                           <- delete_vertex_attr(G, CONF_LAB)
-#     
-#     DISP_MODE <- str_split(CONFIGS[conf], "_")[[1]][1]
-#     
-#     if (DISP_MODE != "PD") {
-#       
-#       E_DF                       <- igraph::as_data_frame(G, what = "edges")
-#       E_RECIP                    <- E_DF
-#       E_RECIP[, c("from", "to")] <- E_DF[, c("to", "from")]
-#       
-#       G <- igraph::graph_from_data_frame(
-#         d        = rbind(E_DF, E_RECIP),
-#         directed = TRUE,
-#         vertices = igraph::as_data_frame(G, what = "vertices")
-#       )
-#       G <- igraph::simplify(G, edge.attr.comb = "first")
-#       
-#     }
-#     
-#     LAYERS[[year]][[conf]][[1]] <- YEARS[year]
-#     LAYERS[[year]][[conf]][[2]] <- CONFIGS[conf]
-#     LAYERS[[year]][[conf]][[3]] <- G
-#     
-#   }
-#   
-# }
-# 
-# for (year in 1:length(YEARS)) {
-#   
-#   for (conf in 1:length(CONFIGS)) {
-#     
-#     W            <- E(LAYERS[[year]][[conf]][[3]])$WEIGHT
-#     W_S          <- E(LAYERS[[year]][[conf]][[3]])$WEIGHT_S
-#     
-#     EDGE_WEIGHTS <- bind_rows(
-#       EDGE_WEIGHTS,
-#       
-#       tibble(YEAR   = as.numeric(YEARS[year]),
-#              CONF   = CONFIGS[conf],
-#              TYPE   = "W",
-#              MEAN   = mean(W[W > 0])),
-#       
-#       tibble(YEAR   = as.numeric(YEARS[year]),
-#              CONF   = CONFIGS[conf],
-#              TYPE   = "W_S",
-#              MEAN   = mean(W[W_S > 0]))
-#     )
-#     
-#   }
-# }
-# 
-# for (year in 1:length(YEARS)) {
-#   
-#   cat("Preparing multilayer graph for", YEARS[[year]], "\n")
-#   
-#   MULTI_GRAPHS[[year]]  <- list()
-#   MULTI_GRAPHS_YEAR     <- NULL
-#   TOTAL_V               <- 0
-#   
-#   for (conf in 1:length(CONFIGS)) {
-#     
-#     G_CONF          <- LAYERS[[year]][[conf]][[3]]
-#     V(G_CONF)$LAYER <- CONFIGS[conf]
-#     V(G_CONF)$REACH <- V(G_CONF)$name
-#     V(G_CONF)$name  <- paste0(V(G_CONF)$name, "_", CONFIGS[conf])
-#     
-#     if (is.null(MULTI_GRAPHS_YEAR)) {
-#       
-#       MULTI_GRAPHS_YEAR <- G_CONF
-#       TOTAL_V           <- vcount(G_CONF)
-#       
-#     } else {
-#       
-#       N_CURR            <- vcount(G_CONF)
-#       CURR_REACH        <- V(G_CONF)$REACH
-#       MULTI_GRAPHS_YEAR <- igraph::disjoint_union(MULTI_GRAPHS_YEAR, G_CONF)
-#       PREV_IDX          <- 1:TOTAL_V
-#       PREV_REACH        <- V(MULTI_GRAPHS_YEAR)$REACH[PREV_IDX]
-#       MATCH_LIST        <- split(PREV_IDX, PREV_REACH)
-#       
-#       INTER_EDGES_LIST  <- lapply(seq_along(CURR_REACH), function(i) {
-#         reach_id   <- CURR_REACH[i]
-#         prev_nodes <- MATCH_LIST[[reach_id]]
-#         
-#         if (!is.null(prev_nodes)) {
-#           return(cbind(prev_nodes, TOTAL_V + i))
-#         }
-#         
-#         return(NULL)
-#         
-#       })
-#       
-#       INTER_EDGES       <- do.call(rbind, INTER_EDGES_LIST)
-#       INTER_EDGES_BOTH  <- rbind(INTER_EDGES, INTER_EDGES[, 2:1])
-#       MULTI_GRAPHS_YEAR <- igraph::add_edges(MULTI_GRAPHS_YEAR, t(INTER_EDGES_BOTH))
-#       IDX               <- (ecount(MULTI_GRAPHS_YEAR) - nrow(INTER_EDGES_BOTH) + 1):ecount(MULTI_GRAPHS_YEAR)
-#       W                 <- filter(EDGE_WEIGHTS, YEAR == YEARS[year], CONF == CONFIGS[conf], TYPE == "W") %>% pull(MEAN)
-#       W_S               <- filter(EDGE_WEIGHTS, YEAR == YEARS[year], CONF == CONFIGS[conf], TYPE == "W_S") %>% pull(MEAN)
-#       
-#       edge_attr(MULTI_GRAPHS_YEAR, "WEIGHT",   IDX) <- W
-#       edge_attr(MULTI_GRAPHS_YEAR, "WEIGHT_S", IDX) <- W_S
-#       
-#       TOTAL_V           <- TOTAL_V + N_CURR
-#       
-#     }
-#   }
-#   
-#   MULTI_GRAPHS[[year]] <- list(
-#     YEAR = YEARS[year],
-#     G    = MULTI_GRAPHS_YEAR
-#   )
-#   
-# }
-# 
-# ## METRICS ####
-# ### ROBUSTNESS ####
-# 
-# # For a continuous progress update open the log-file via the windows console:
-# # powershell -command Get-Content 'ADD_PATH\PROGRESS_LOG_ROBUSTNESS.txt' -Wait
-# 
-# plan(multisession, workers = floor(parallel::detectCores() * 2/3)) 
-# 
-# N_SRC     <- 100
-# N_REPS    <- 100
-# YEARS     <- c(1817, 1857, 1875, 1910, 1965, 1996, 2022)
-# STEP_SIZE <- 1000
-# LOG_FILE  <- "PROGRESS_LOG_ROBUSTNESS.txt"
-# 
-# cat("Starting robustness analysis\n", file = LOG_FILE, append = FALSE)
-# 
-# ROBUSTNESS_LIST <- vector("list", length(YEARS))
-# 
-# for (year in seq_along(YEARS)) {
-#   
-#   CURRENT_YEAR <- YEARS[year]
-#   GRAPH        <- MULTI_GRAPHS[[year]]$G 
-#   N0           <- vcount(GRAPH)
-#   ATTACK_STEPS <- seq(0, N0, by = STEP_SIZE)
-#   NUM_STEPS    <- length(ATTACK_STEPS)
-#   
-#   NODE_METADATA <- data.frame(
-#     INDEX = seq_len(vcount(GRAPH)),
-#     RCI   = vertex_attr(GRAPH, "RCI_S"),
-#     LAYER = vertex_attr(GRAPH, "LAYER")
-#   )
-#   
-#   ATTACK_ORDER_DATA <- NODE_METADATA %>%
-#     group_by(LAYER) %>%
-#     mutate(LAYER_RANK = rank(RCI, ties.method = "random")) %>%
-#     ungroup() %>%
-#     arrange(LAYER_RANK, LAYER)
-#   
-#   ATTACK_ORDER_TARGETED <- ATTACK_ORDER_DATA$INDEX
-#   
-#   cat(sprintf("\nCalculating robustness for %d\n", CURRENT_YEAR))
-#   
-#   YEAR_RESULTS <- future_lapply(seq_len(N_REPS), function(rep) {
-#     
-#     gc()
-#     REP_RESULTS  <- vector("list", NUM_STEPS)
-#     ATTACK_ORDER <- ATTACK_ORDER_TARGETED
-#     
-#     for (step in seq_along(ATTACK_STEPS)) {
-#       T_STEP_START  <- Sys.time()
-#       NODES_REMOVED <- ATTACK_STEPS[step]
-#       
-#       if (NODES_REMOVED == 0) {
-#         
-#         G_SUB <- GRAPH
-#         
-#       } else {
-#         
-#         NODES_TO_REMOVE <- ATTACK_ORDER[1:NODES_REMOVED]
-#         G_SUB <- delete_vertices(GRAPH, NODES_TO_REMOVE)
-#         
-#       }
-#       
-#       N_NODES <- vcount(G_SUB)
-#       
-#       if (N_NODES > 1) {
-#         SRC <- sample.int(N_NODES, min(N_SRC, N_NODES))
-#         
-#         D <- distances(G_SUB, v = SRC, to = seq_len(N_NODES), weights = E(G_SUB)$WEIGHT_S)
-#         
-#         DIST <- as.vector(D)
-#         DIST <- DIST[DIST > 0 & is.finite(DIST)]
-#         
-#         EF <- if (length(DIST)) sum(1 / DIST) else NA_real_
-#       } else {
-#         EF    <- NA_real_
-#         DIST <- NA_real_
-#         SRC   <- integer(0)
-#       }
-#       
-#       NR_PATHS <- length(SRC) * N_NODES
-#       
-#       REP_RESULTS[[step]] <- list(
-#         YEAR         = CURRENT_YEAR,
-#         REPLICATE    = rep,
-#         REMOVED      = NODES_REMOVED,
-#         NODES_LEFT   = N_NODES,
-#         DIST_SUM     = sum(DIST, na.rm = TRUE),
-#         DIST_MEDIAN  = median(DIST, na.rm = TRUE),
-#         DIST_MEAN    = mean(DIST, na.rm = TRUE),
-#         DIST_SD      = sd(DIST, na.rm = TRUE),
-#         NR_PATHS     = NR_PATHS
-#       )
-#       
-#       T_STEP_END <- Sys.time()
-#       STEP_TIME  <- as.numeric(difftime(T_STEP_END, T_STEP_START, units = "secs"))
-#       cat(
-#         sprintf("[%s] Year: %d | Rep: %d/%d | Step: %d/%d | Removed: %d | Time: %.2fs\n",
-#                 T_STEP_END, CURRENT_YEAR, rep, N_REPS, step, NUM_STEPS, NODES_REMOVED, STEP_TIME), 
-#         file = LOG_FILE, append = TRUE
-#       ) 
-#     }
-#     
-#     return(rbindlist(REP_RESULTS))
-#     
-#   }, future.seed = TRUE, future.chunk.size = 1) 
-#   
-#   ROBUSTNESS_LIST[[year]] <- rbindlist(YEAR_RESULTS)
-# }
-# 
-# ROBUSTNESS <- rbindlist(ROBUSTNESS_LIST)
-# write_rds(ROBUSTNESS, "./RESULTS/ROBUSTNESS.rds")
-# 
-# ### DISSIMILARITY ####
-# 
-# LAYER_DIS <- list()
-# 
-# for (year in 1:length(YEARS)) {
-#   
-#   cat("Processing", YEARS[year], "\n")
-#   
-#   G        <- MULTI_GRAPHS[[year]]$G
-#   LAYER_ID <- unique(V(G)$LAYER)
-#   NODE_IDS <- V(G)$REACH
-#   
-#   RCI_MAT           <- matrix(NA, nrow = length(unique(NODE_IDS)), ncol = length(LAYER_ID))
-#   rownames(RCI_MAT) <- unique(NODE_IDS)
-#   colnames(RCI_MAT) <- LAYER_ID
-#   
-#   for (layer in LAYER_ID) {
-#     
-#     i                     <- which(V(G)$LAYER == layer)
-#     NODES                 <- NODE_IDS[i]
-#     RCI_MAT[NODES, layer] <- V(G)$RCI_S[i]
-#     
-#   }
-#   
-#   DIS_MAT           <- as.matrix(dist(t(RCI_MAT), method = "euclidean"))
-#   LAYER_DIS[[year]] <- DIS_MAT
-#   
-# }
-# 
-# DISSIMILARITY <- map2_dfr(
-#   LAYER_DIS,
-#   YEARS,
-#   function(D, year) {
-#     TIBBLE <- as_tibble(as.table(D), .name_repair = "minimal")
-#     names(TIBBLE) <- c("CONFIG_1", "CONFIG_2", "DISSIMILARITY")
-#     TIBBLE %>%
-#       filter(CONFIG_1 < CONFIG_2) %>%
-#       mutate(YEAR = year)
-#   }
-# )
-# 
-# write_csv(DISSIMILARITY, "./RESULTS/DISSIMILARITY.csv")
-# 
-# ### MODULARITY ####
-# 
-# MODULARITY <- tibble(
-#   YEAR = YEARS,
-#   MD   = NA
-# )
-# 
-# for (year in 1:length(YEARS)) {
-#   
-#   gc()
-#   cat("Calculating modularity for ", YEARS[[year]], "\n")
-#   
-#   G                   <- LAYERS[[year]][[1]][[3]]
-#   MD                  <- igraph::modularity(G, membership = V(G)$CC, weights = log(E(G)$WEIGHT + 1))
-#   MODULARITY$MD[year] <- MD
-#   
-# }
-# 
-# write_csv(MODULARITY, "./RESULTS/MODULARITY.csv")
+PARAMS_MASTER <- tibble(DISP                   = c(rep("MDM", 4), rep("SDM", 4), rep("PD", 4)),
+                        SC                     = rep(c("1", "2", "3", "4"), 3),
+                        DIST                   = rep(c("DSC1", "DSC2", "DSC3", "DSC4"), 3),
+                        nodes_id               = rep("name", 4*3),
+                        index_type             = rep("full", 4*3),
+                        dir_fragmentation_type = rep("asymmetric", 4*3),
+                        pass_u                 = rep("pass_u", 4*3),
+                        pass_d                 = rep("pass_d", 4*3),
+                        B_ij_flag              = rep(TRUE, 4*3),
+                        c_ij_flag              = rep(TRUE, 4*3),
+                        dir_distance_type      = c(rep("symmetric", 8), rep("asymmetric", 4)),
+                        disp_type              = c(rep("leptokurtic", 8), rep("exponential", 4)))
+
+PARAMS_MASTER <- PARAMS_MASTER %>%
+  rbind(PARAMS_MASTER %>% mutate(index_type = "reach")) %>%
+  mutate(weight  = paste("WSC", SC, sep = ""),
+         param_u = ifelse(DISP == "PD", 0, NA),
+         param_d = ifelse(DISP == "PD", 0.05^(1/2000), NA),
+
+         param_l = case_when(
+
+           DISP == "PD" ~ NA,
+           DISP == "MDM" ~ "2600, 74200, .5",
+           DISP == "SDM" ~ "260, 7420, .5")
+  )
+
+## NETWORK DISTANCES ####
+### CCI ####
+
+PARAMS <- PARAMS_MASTER %>%
+  filter(!(DISP == "MDM" &
+             !SC %in% c(1,2)) &
+           index_type == "full")
+
+#### 1817 ####
+
+INDICES_1817_LIST <- index_calculation_2(GRAPHS[[1]][[1]][-1], PARAMS, 1817)
+gc()
+
+INDICES_1817 <- do.call(rbind, lapply(INDICES_1817_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1817)
+CCI_1817     <- INDICES_1817 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
+
+#### 1857 ####
+
+INDICES_1857_LIST <- index_calculation_2(GRAPHS[[1]][[2]][-1], PARAMS, 1857)
+gc()
+
+INDICES_1857 <- do.call(rbind, lapply(INDICES_1857_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1857)
+CCI_1857     <- INDICES_1857 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
+
+#### 1875 ####
+
+INDICES_1875_LIST <- index_calculation_2(GRAPHS[[1]][[3]][-1], PARAMS, 1875)
+gc()
+
+INDICES_1875 <- do.call(rbind, lapply(INDICES_1875_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1875)
+CCI_1875     <- INDICES_1875 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
+
+#### 1910 ####
+
+INDICES_1910_LIST <- index_calculation_2(GRAPHS[[1]][[4]][-1], PARAMS, 1910)
+gc()
+
+INDICES_1910 <- do.call(rbind, lapply(INDICES_1910_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1910)
+CCI_1910     <- INDICES_1910 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
+
+#### 1965 ####
+
+INDICES_1965_LIST <- index_calculation_2(GRAPHS[[1]][[5]][-1], PARAMS, 1965)
+gc()
+
+INDICES_1965 <- do.call(rbind, lapply(INDICES_1965_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1965)
+CCI_1965     <- INDICES_1965 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
+
+#### 1996 ####
+
+INDICES_1996_LIST <- index_calculation_2(GRAPHS[[1]][[6]][-1], PARAMS, 1996)
+gc()
+
+INDICES_1996 <- do.call(rbind, lapply(INDICES_1996_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1996)
+CCI_1996     <- INDICES_1996 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
+
+#### 2022 ####
+
+INDICES_2022_LIST <- index_calculation_2(GRAPHS[[1]][[7]][-1], PARAMS, 2022)
+gc()
+
+INDICES_2022 <- do.call(rbind, lapply(INDICES_2022_LIST, function(x) do.call(rbind, x))) %>% mutate(YEAR = 2022)
+CCI_2022     <- INDICES_2022 %>% filter(index_type ==  "full") %>% dplyr::select(-name)
+
+#### COMBINE YEARS ####
+
+CCI <- rbind(
+  CCI_1817,
+  CCI_1857,
+  CCI_1875,
+  CCI_1910,
+  CCI_1965,
+  CCI_1996,
+  CCI_2022
+)
+
+CCI_PROCESSED <- CCI %>%
+
+  group_by(YEAR, CONF_ID) %>%
+  summarise(num = sum(num),
+            den = sum(den),
+            across(names(PARAMS), first),
+            .groups = "drop") %>%
+  ungroup() %>%
+  rename(NUM = num,
+         DEN = den) %>%
+  mutate(CCI = NUM/DEN) %>%
+  dplyr::select(CCI, NUM, DEN, YEAR, CONF_ID, names(PARAMS)) %>%
+  dplyr::select(-weight)
+
+### RCI ####
+
+PARAMS <- PARAMS_MASTER %>%
+  filter(!(DISP == "MDM" &
+             !SC %in% c(1,2)) &
+           index_type == "reach")
+
+#### 1817 ####
+
+INDICES_1817_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[1]][-1], PARAMS, 1817)
+
+INDICES_1817_CONCAT <- do.call(rbind, lapply(INDICES_1817_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1817)
+RCI_1817_CONCAT     <- INDICES_1817_CONCAT %>% filter(index_type == "reach")
+
+#### 1857 ####
+
+INDICES_1857_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[2]][-1], PARAMS, 1857)
+
+INDICES_1857_CONCAT <- do.call(rbind, lapply(INDICES_1857_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1857)
+RCI_1857_CONCAT     <- INDICES_1857_CONCAT %>% filter(index_type == "reach")
+
+#### 1875 ####
+
+INDICES_1875_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[3]][-1], PARAMS, 1875)
+
+INDICES_1875_CONCAT <- do.call(rbind, lapply(INDICES_1875_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1875)
+RCI_1875_CONCAT     <- INDICES_1875_CONCAT %>% filter(index_type == "reach")
+
+#### 1910 ####
+
+INDICES_1910_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[4]][-1], PARAMS, 1910)
+
+INDICES_1910_CONCAT <- do.call(rbind, lapply(INDICES_1910_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1910)
+RCI_1910_CONCAT     <- INDICES_1910_CONCAT %>% filter(index_type == "reach")
+
+#### 1965 ####
+
+INDICES_1965_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[5]][-1], PARAMS, 1965)
+
+INDICES_1965_CONCAT <- do.call(rbind, lapply(INDICES_1965_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1965)
+RCI_1965_CONCAT     <- INDICES_1965_CONCAT %>% filter(index_type == "reach")
+
+#### 1996 ####
+
+INDICES_1996_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[6]][-1], PARAMS, 1996)
+
+INDICES_1996_CONCAT <- do.call(rbind, lapply(INDICES_1996_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 1996)
+RCI_1996_CONCAT     <- INDICES_1996_CONCAT %>% filter(index_type == "reach")
+
+#### 2022 ####
+
+INDICES_2022_LIST_CONCAT <- index_calculation_2(GRAPHS_CONCAT[[1]][[7]][-1], PARAMS, 2022)
+
+INDICES_2022_CONCAT <- do.call(rbind, lapply(INDICES_2022_LIST_CONCAT, function(x) do.call(rbind, x))) %>% mutate(YEAR = 2022)
+RCI_2022_CONCAT     <- INDICES_2022_CONCAT %>% filter(index_type == "reach")
+
+#### COMBINE YEARS ####
+
+RCI_CONCAT <- rbind(
+  RCI_1817_CONCAT,
+  RCI_1857_CONCAT,
+  RCI_1875_CONCAT,
+  RCI_1910_CONCAT,
+  RCI_1965_CONCAT,
+  RCI_1996_CONCAT,
+  RCI_2022_CONCAT
+)
+
+RCI_PROCESSED_CONCAT <- RCI_CONCAT %>%
+  rename(DEN_G = den,
+         FID = name,
+         NUM = num)
+
+RCI_DEN_CONCAT <- RCI_PROCESSED_CONCAT %>%
+
+  group_by(YEAR, CONF_ID) %>%
+  summarise("DEN" = sum(DEN_G))
+
+RCI_PROCESSED_CONCAT <- RCI_PROCESSED_CONCAT %>%
+  left_join(RCI_DEN_CONCAT, by = c("YEAR", "CONF_ID")) %>%
+  mutate(RCI = NUM/DEN) %>%
+  dplyr::select(RCI, NUM, DEN, DEN_G, FID, ID_G, YEAR, CONF_ID, names(PARAMS))
+
+CONCAT_KEY <- tibble(
+  YEAR     = c(1817, 1857, 1875, 1910, 1965, 1996, 2022),
+  NR_NODES = c(nrow(NODES_1817), nrow(NODES_1857), nrow(NODES_1875), nrow(NODES_1910),
+               nrow(NODES_1965), nrow(NODES_1996), nrow(NODES_2022))
+)
+
+RCI_PROCESSED_CONCAT <- RCI_PROCESSED_CONCAT %>%
+  left_join(CONCAT_KEY, by = "YEAR") %>%
+  mutate(FID = as.numeric(FID)) %>%
+  filter(FID <= NR_NODES-1)
+
+WEIGHTS <- rbind(
+  NODE_WEIGHTS_1817 %>% mutate(YEAR = 1817),
+  NODE_WEIGHTS_1857 %>% mutate(YEAR = 1857),
+  NODE_WEIGHTS_1875 %>% mutate(YEAR = 1875),
+  NODE_WEIGHTS_1910 %>% mutate(YEAR = 1910),
+  NODE_WEIGHTS_1965 %>% mutate(YEAR = 1965),
+  NODE_WEIGHTS_1996 %>% mutate(YEAR = 1996),
+  NODE_WEIGHTS_2022 %>% mutate(YEAR = 2022)
+) %>%
+  dplyr::select(-contains("DSC")) %>%
+  pivot_longer(cols = c("WSC1", "WSC2", "WSC3", "WSC4"),
+               names_to = "SC",
+               values_to = "WEIGHT") %>%
+  mutate(name = as.numeric(name),
+         SC = str_sub(SC, -1)) %>%
+  rename(FID = name) %>%
+
+  left_join(rbind(
+    NODES_1817 %>% mutate(YEAR = 1817, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
+    NODES_1857 %>% mutate(YEAR = 1857, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
+    NODES_1875 %>% mutate(YEAR = 1875, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
+    NODES_1910 %>% mutate(YEAR = 1910, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
+    NODES_1965 %>% mutate(YEAR = 1965, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
+    NODES_1996 %>% mutate(YEAR = 1996, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE),
+    NODES_2022 %>% mutate(YEAR = 2022, FID = as.numeric(FID)) %>% dplyr::select(FID, YEAR, WB_TYPE)
+  ), by = c("FID", "YEAR")) %>%
+  dplyr::relocate(geometry, .after = last_col())
+
+RCI_PROCESSED_CONCAT <- RCI_PROCESSED_CONCAT %>%
+
+  dplyr::select(-contains(c("flag", "pass", "index_type", "nodes_id", "dir", "param", "disp_type", "weight", "NR_NODES"))) %>%
+  left_join(WEIGHTS, by = c("FID", "YEAR", "SC")) %>%
+  st_as_sf() %>%
+  mutate(ID = row_number()) %>%
+  dplyr::select(ID, everything())
+
+## EUCLIDEAN DISTANCES ####
+### RCI ####
+#### 1817 ####
+
+NODE_1817_CENTROID <- NODES_1817 %>%
+  st_line_sample(sample = 0.5) %>%
+  st_cast("POINT") %>%
+  st_as_sf() %>%
+  cbind(NODES_1817 %>% st_drop_geometry()) %>%
+  left_join(NODE_WEIGHTS_1817, by = c("FID" = "name")) %>%
+  rename(geometry = x) %>%
+  st_as_sf()
+
+COORDS        <- st_coordinates(NODE_1817_CENTROID)
+DIST_MAT      <- as.matrix(dist(COORDS))
+WEIGHTS       <- paste0("WSC", 1:4)
+TR            <- 2e+3
+KERNEL_FACTOR <- 0.05^(1/TR)
+
+for (w in WEIGHTS) {
+  cat("Processing", w, "\n")
+  W_VALS <- NODE_1817_CENTROID[[w]]
+  diag(DIST_MAT) <- NA
+  NODE_1817_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
+}
+
+EUC_1817 <- NODE_1817_CENTROID %>%
+  st_drop_geometry() %>%
+  dplyr::select(FID, starts_with("RCI")) %>%
+  mutate(YEAR = 1817) %>%
+  relocate(YEAR, .after = FID)
+
+#### 1857 ####
+
+NODE_1857_CENTROID <- NODES_1857 %>%
+  st_line_sample(sample = 0.5) %>%
+  st_cast("POINT") %>%
+  st_as_sf() %>%
+  cbind(NODES_1857 %>% st_drop_geometry()) %>%
+  left_join(NODE_WEIGHTS_1857, by = c("FID" = "name")) %>%
+  rename(geometry = x) %>%
+  st_as_sf()
+
+COORDS        <- st_coordinates(NODE_1857_CENTROID)
+DIST_MAT      <- as.matrix(dist(COORDS))
+WEIGHTS       <- paste0("WSC", 1:4)
+TR            <- 2e+3
+KERNEL_FACTOR <- 0.05^(1/TR)
+
+for (w in WEIGHTS) {
+  cat("Processing", w, "\n")
+  W_VALS <- NODE_1857_CENTROID[[w]]
+  diag(DIST_MAT) <- NA
+  NODE_1857_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
+}
+
+EUC_1857 <- NODE_1857_CENTROID %>%
+  st_drop_geometry() %>%
+  dplyr::select(FID, starts_with("RCI")) %>%
+  mutate(YEAR = 1857) %>%
+  relocate(YEAR, .after = FID)
+
+#### 1875 ####
+
+NODE_1875_CENTROID <- NODES_1875 %>%
+  st_line_sample(sample = 0.5) %>%
+  st_cast("POINT") %>%
+  st_as_sf() %>%
+  cbind(NODES_1875 %>% st_drop_geometry()) %>%
+  left_join(NODE_WEIGHTS_1875, by = c("FID" = "name")) %>%
+  rename(geometry = x) %>%
+  st_as_sf()
+
+COORDS        <- st_coordinates(NODE_1875_CENTROID)
+DIST_MAT      <- as.matrix(dist(COORDS))
+WEIGHTS       <- paste0("WSC", 1:4)
+TR            <- 2e+3
+KERNEL_FACTOR <- 0.05^(1/TR)
+
+for (w in WEIGHTS) {
+  cat("Processing", w, "\n")
+  W_VALS <- NODE_1875_CENTROID[[w]]
+  diag(DIST_MAT) <- NA
+  NODE_1875_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
+}
+
+EUC_1875 <- NODE_1875_CENTROID %>%
+  st_drop_geometry() %>%
+  dplyr::select(FID, starts_with("RCI")) %>%
+  mutate(YEAR = 1875) %>%
+  relocate(YEAR, .after = FID)
+
+#### 1910 ####
+
+NODE_1910_CENTROID <- NODES_1910 %>%
+  st_line_sample(sample = 0.5) %>%
+  st_cast("POINT") %>%
+  st_as_sf() %>%
+  cbind(NODES_1910 %>% st_drop_geometry()) %>%
+  left_join(NODE_WEIGHTS_1910, by = c("FID" = "name")) %>%
+  rename(geometry = x) %>%
+  st_as_sf()
+
+COORDS        <- st_coordinates(NODE_1910_CENTROID)
+DIST_MAT      <- as.matrix(dist(COORDS))
+WEIGHTS       <- paste0("WSC", 1:4)
+TR            <- 2e+3
+KERNEL_FACTOR <- 0.05^(1/TR)
+
+for (w in WEIGHTS) {
+  cat("Processing", w, "\n")
+  W_VALS <- NODE_1910_CENTROID[[w]]
+  diag(DIST_MAT) <- NA
+  NODE_1910_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
+}
+
+EUC_1910 <- NODE_1910_CENTROID %>%
+  st_drop_geometry() %>%
+  dplyr::select(FID, starts_with("RCI")) %>%
+  mutate(YEAR = 1910) %>%
+  relocate(YEAR, .after = FID)
+
+#### 1965 ####
+
+NODE_1965_CENTROID <- NODES_1965 %>%
+  st_line_sample(sample = 0.5) %>%
+  st_cast("POINT") %>%
+  st_as_sf() %>%
+  cbind(NODES_1965 %>% st_drop_geometry()) %>%
+  left_join(NODE_WEIGHTS_1965, by = c("FID" = "name")) %>%
+  rename(geometry = x) %>%
+  st_as_sf()
+
+COORDS        <- st_coordinates(NODE_1965_CENTROID)
+DIST_MAT      <- as.matrix(dist(COORDS))
+WEIGHTS       <- paste0("WSC", 1:4)
+TR            <- 2e+3
+KERNEL_FACTOR <- 0.05^(1/TR)
+
+for (w in WEIGHTS) {
+  cat("Processing", w, "\n")
+  W_VALS <- NODE_1965_CENTROID[[w]]
+  diag(DIST_MAT) <- NA
+  NODE_1965_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
+}
+
+EUC_1965 <- NODE_1965_CENTROID %>%
+  st_drop_geometry() %>%
+  dplyr::select(FID, starts_with("RCI")) %>%
+  mutate(YEAR = 1965) %>%
+  relocate(YEAR, .after = FID)
+
+#### 1996 ####
+
+NODE_1996_CENTROID <- NODES_1996 %>%
+  st_line_sample(sample = 0.5) %>%
+  st_cast("POINT") %>%
+  st_as_sf() %>%
+  cbind(NODES_1996 %>% st_drop_geometry()) %>%
+  left_join(NODE_WEIGHTS_1996, by = c("FID" = "name")) %>%
+  rename(geometry = x) %>%
+  st_as_sf()
+
+COORDS        <- st_coordinates(NODE_1996_CENTROID)
+DIST_MAT      <- as.matrix(dist(COORDS))
+WEIGHTS       <- paste0("WSC", 1:4)
+TR            <- 2e+3
+KERNEL_FACTOR <- 0.05^(1/TR)
+
+for (w in WEIGHTS) {
+  cat("Processing", w, "\n")
+  W_VALS <- NODE_1996_CENTROID[[w]]
+  diag(DIST_MAT) <- NA
+  NODE_1996_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
+}
+
+EUC_1996 <- NODE_1996_CENTROID %>%
+  st_drop_geometry() %>%
+  dplyr::select(FID, starts_with("RCI")) %>%
+  mutate(YEAR = 1996) %>%
+  relocate(YEAR, .after = FID)
+
+#### 2022 ####
+
+NODE_2022_CENTROID <- NODES_2022 %>%
+  st_line_sample(sample = 0.5) %>%
+  st_cast("POINT") %>%
+  st_as_sf() %>%
+  cbind(NODES_2022 %>% st_drop_geometry()) %>%
+  left_join(NODE_WEIGHTS_2022, by = c("FID" = "name")) %>%
+  rename(geometry = x) %>%
+  st_as_sf()
+
+COORDS        <- st_coordinates(NODE_2022_CENTROID)
+DIST_MAT      <- as.matrix(dist(COORDS))
+WEIGHTS       <- paste0("WSC", 1:4)
+TR            <- 2e+3
+KERNEL_FACTOR <- 0.05^(1/TR)
+
+for (w in WEIGHTS) {
+  cat("Processing", w, "\n")
+  W_VALS <- NODE_2022_CENTROID[[w]]
+  diag(DIST_MAT) <- NA
+  NODE_2022_CENTROID[[paste0("RCI_EUC_", w)]] <- rowSums(W_VALS * (KERNEL_FACTOR^DIST_MAT), na.rm = TRUE)
+}
+
+EUC_2022 <- NODE_2022_CENTROID %>%
+  st_drop_geometry() %>%
+  dplyr::select(FID, starts_with("RCI")) %>%
+  mutate(YEAR = 2022) %>%
+  relocate(YEAR, .after = FID)
+
+#### COMBINE YEARS ####
+
+RCI_EUC <- rbind(
+
+  EUC_1817,
+  EUC_1857,
+  EUC_1875,
+  EUC_1910,
+  EUC_1965,
+  EUC_1996,
+  EUC_2022
+
+) %>%
+
+  set_names(c("FID", "YEAR", c(1:4))) %>%
+  pivot_longer(cols = as.character(c(1:4)), names_to = "SC", values_to = "NUM")
+
+### CCI ####
+
+CCI_EUC <- list()
+
+for (year in c(1817, 1857, 1875, 1910, 1965, 1996, 2022)) {
+
+  cat("Processing year:", year, "\n")
+
+  NODE_CENTROID <- get(paste0("NODE_", year, "_CENTROID"))
+  COORDS        <- st_coordinates(NODE_CENTROID)
+  DIST_MATRIX   <- as.matrix(dist(COORDS))
+  KERNEL_FACTOR <- 0.05^(1/TR)
+
+  CCI_EUC_WIDE <- RCI_EUC %>%
+    filter(YEAR == year) %>%
+    mutate(SC = paste0("SC", SC)) %>%
+    pivot_wider(names_from = SC, values_from = NUM)
+
+  for (sc in paste0("SC", 1:4)) {
+
+    cat("Processing: ", sc, "\n")
+
+    W <- CCI_EUC_WIDE[[sc]]
+    CCI_VAL <- sum(outer(W, W) * (KERNEL_FACTOR^DIST_MATRIX))
+    CCI_EUC[[paste0("CCI_", sc, "_", year)]] <- data.frame(
+      YEAR = year,
+      SC = sc,
+      NUM = CCI_VAL
+    )
+  }
+}
+
+CCI_EUC <- do.call(rbind, CCI_EUC)
+
+## RCI MASTER TABLE ####
+
+RCI_EUC_TEMP <- RCI_PROCESSED_CONCAT %>%
+  filter(DISP == "PD") %>%
+  mutate(DISP =  "EUC",
+         ID             = row_number() + nrow(RCI_PROCESSED_CONCAT)) %>%
+  mutate(CONF_ID = case_when(
+
+    SC == 1 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 1,
+    SC == 2 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 2,
+    SC == 3 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 3,
+    SC == 4 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 4
+
+  )) %>%
+  dplyr::select(-RCI, -NUM) %>%
+  left_join(RCI_EUC %>% mutate(FID = as.numeric(FID)), by = c("FID", "YEAR", "SC")) %>%
+  mutate(RCI = NUM/DEN) %>%
+  dplyr::select(ID, RCI, NUM, everything())
+
+RCI_MASTER <- RCI_PROCESSED_CONCAT %>%
+  rbind(RCI_EUC_TEMP) %>%
+  st_as_sf() %>%
+  dplyr::select(-DIST)
+
+## CCI MASTER TABLE ####
+
+CCI_NET <- CCI_PROCESSED %>%
+  dplyr::select(CCI, intersect(names(CCI_PROCESSED), names(RCI_MASTER)))
+
+CCI_EUC <- CCI_NET %>%
+  filter(DISP == "PD") %>%
+  mutate(DISP = "EUC") %>%
+  mutate(CONF_ID = case_when(
+
+    SC == 1 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 1,
+    SC == 2 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 2,
+    SC == 3 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 3,
+    SC == 4 ~ nrow(PARAMS_MASTER %>% filter(index_type == "reach")) + 4
+
+  )) %>%
+  dplyr::select(-CCI, -NUM) %>%
+  left_join(CCI_EUC %>%
+              mutate(SC = str_sub(SC, -1, -1)), by = c("YEAR", "SC")) %>%
+  mutate(CCI = NUM/DEN) %>%
+  dplyr::select(CCI, NUM, everything())
+
+CCI_MASTER <- CCI_NET %>%
+  rbind(CCI_EUC) %>%
+  mutate(ID = row_number()) %>%
+  relocate(ID, .before = CCI) %>%
+  dplyr::select(-DIST)
+
+# ~~~~~~~~~~~~~~~~~~~~ ####
+# ~~~~~~ ><{{{°> ~~~~~ ####
+# ~~~~~~~~~~~~~~~~~~~~ ####
+# VALIDATION ####
+
+RCI_MASTER_2022 <- RCI_MASTER %>%
+  filter(YEAR == 2022 & WB_TYPE != "CO")
+
+VALIDATION <- SAMPLES %>%
+  left_join(SC_TAXA %>%
+              dplyr::select(-ID_TAXA, -DISP, -GROUP), by = c("GENUS", "SPECIES")) %>%
+  filter(ERROR_CUM <= 5 & ERROR_MAX <= 2) %>%
+  filter(SC != 5) %>%
+  st_join(RCI_MASTER_2022 %>%
+            dplyr::select(FID, geometry) %>%
+            unique() %>%
+            rename(FID_RCI = FID), join = st_nearest_feature) %>%
+  relocate(FID_RCI, .after = ID_SMPL) %>%
+  left_join(RCI_MASTER_2022 %>%
+              st_drop_geometry() %>%
+              rename(FID_RCI = FID) %>%
+              mutate(SC = as.numeric(SC)) %>%
+              dplyr::select(FID_RCI, SC, WEIGHT, DISP, WB_TYPE, RCI, NUM, DEN),
+            by = c("FID_RCI", "SC", "DISP")) %>%
+  relocate(geometry, .after = last_col()) %>%
+  mutate(PRES = ifelse(PRES == 1, "Present", "Absent")) %>%
+  mutate(SC   = factor(SC, levels = c(1:4)),
+         PRES = factor(PRES, levels = rev(c("Absent", "Present"))),
+         DISP = factor(DISP, levels = c("EUC", "PD", "SDM", "MDM"))) %>%
+  group_by(DISP, SC) %>%
+  mutate(NUM = scales::rescale(NUM),
+         RCI = scales::rescale(RCI))
+
+SIGNIFICANCE <- VALIDATION %>%
+  st_drop_geometry() %>%
+  dplyr::select(NUM, DISP, SC, PRES) %>%
+  drop_na() %>%
+  mutate(NUM = as.numeric(NUM)) %>%
+  group_by(DISP, SC, PRES) %>%
+  mutate(GROUP_SIZE = n()) %>%
+  ungroup()
+
+GROUP_SIZES <- SIGNIFICANCE %>%
+  group_by(DISP, SC, PRES) %>%
+  summarise(N = n(), .groups = "drop") %>%
+  pivot_wider(names_from = PRES, values_from = N, names_prefix = "N_", values_fill = 0)
+
+set.seed(42)
+SIGNIFICANCE <- SIGNIFICANCE %>%
+  group_by(DISP, SC) %>%
+  mutate(MIN_SIZE = min(GROUP_SIZE)) %>%
+  ungroup() %>%
+  group_by(DISP, SC, PRES) %>%
+  group_modify(~ slice_sample(.x, n = .x$MIN_SIZE[1])) %>%
+  ungroup() %>%
+  group_by(DISP, SC) %>%
+  summarise(test = list(wilcox.test(NUM ~ PRES, alternative = "greater", exact = FALSE) %>% broom::tidy()), .groups = "drop") %>%
+  unnest(test) %>%
+  dplyr::select(DISP, SC, p.value) %>%
+  mutate(LEVEL = case_when(
+    p.value < 0.001 ~ "***",
+    p.value <= 0.01 ~ "**",
+    p.value <= 0.05 ~ "*",
+    p.value <= 0.1 ~ " ",
+    TRUE ~ " "
+  )) %>%
+  rename(P = p.value) %>%
+  left_join(GROUP_SIZES, by = c("DISP", "SC"))
+
+write_csv(SIGNIFICANCE, "./RESULTS/SIGNIFICANCE.csv")
+st_write(VALIDATION, "./RESULTS/VALIDATION/VALIDATION.shp", append = FALSE)
+
+# ~~~~~~~~~~~~~~~~~~~~ ####
+# ~~~~~~ ><{{{°> ~~~~~ ####
+# ~~~~~~~~~~~~~~~~~~~~ ####
+# CC (CLUSTERS) ####
+
+RCI_CLUSTER <- RCI_MASTER %>%
+  st_drop_geometry() %>%
+  filter(WB_TYPE != "CO") %>%
+  dplyr::select(FID, YEAR, NUM, DISP, SC) %>%
+  left_join(SIGNIFICANCE %>% dplyr::select(-LEVEL, -starts_with("N")),
+            by = c("DISP", "SC")) %>%
+  filter(P < .05) %>%
+  dplyr::select(-P) %>%
+  group_by(YEAR, FID) %>%
+  mutate(SC = paste0("SC", SC)) %>%
+  pivot_wider(names_from = c("SC", "DISP"),
+              values_from = NUM) %>%
+  ungroup() %>%
+  mutate(ID = row_number()) %>%
+  dplyr::select(ID, everything())
+
+COR                 <- cor(RCI_CLUSTER %>% dplyr::select(starts_with("SC")), method = "kendall")
+COR[abs(COR) <= .7] <- "ok"
+diag(COR)           <- "ok"
+REDUNDANT           <- c()
+COR
+
+REDUNDANT          <- c("SC3_PD")
+REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
+COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
+COR
+
+REDUNDANT          <- c(REDUNDANT, c("SC1_PD"))
+REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
+COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
+COR
+
+REDUNDANT          <- c(REDUNDANT, c("SC1_SDM"))
+REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
+COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
+COR
+
+REDUNDANT          <- c(REDUNDANT, c("SC4_PD"))
+REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
+COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
+COR
+
+REDUNDANT          <- c(REDUNDANT, c("SC3_SDM"))
+REDUNDANT_i        <- which(colnames(COR) %in% REDUNDANT)
+COR                <- COR[-REDUNDANT_i, -REDUNDANT_i]
+COR
+
+K_WSS_CC <- fviz_nbclust(RCI_CLUSTER %>%
+                           dplyr::select(-FID, -YEAR, -contains(REDUNDANT)) %>%
+                           column_to_rownames("ID") %>%
+                           mutate(across(everything(), ~ scale(.x))) %>%
+                           mutate(across(everything(), ~ log(.x+2))),
+                         FUNcluster = cluster::clara,
+                         method = "wss",
+                         k.max = 10,
+                         nboot = 25,
+                         verbose = TRUE)
+
+K_WSS_CC <- K_WSS_CC$data %>% as_tibble() %>% rename(K = clusters, WSS = y)
+
+write_csv(K_WSS_CC, "./RESULTS/K_WSS_CC.csv")
+
+CC <- cluster::clara(RCI_CLUSTER %>%
+                       dplyr::select(-FID, -YEAR, -contains(REDUNDANT)) %>%
+                       column_to_rownames("ID") %>%
+                       mutate(across(everything(), ~ scale(.x))) %>%
+                       mutate(across(everything(), ~ log(.x+2))),
+                     k = 4)
+
+RCI_MASTER <- RCI_MASTER %>%
+  left_join(RCI_CLUSTER %>%
+              dplyr::select(FID, YEAR) %>%
+              cbind(CC = CC$clustering),
+            by = c("FID", "YEAR")) %>%
+  relocate(CC, .after = SC) %>%
+  mutate(CC = factor(CC, levels = c(1,2,3,4)))
+
+CLUSTER_VARIABLES <- RCI_CLUSTER %>%
+  dplyr::select(starts_with("SC") & !all_of(REDUNDANT)) %>%
+  names()
+
+CLUSTER_VARIABLES <- tibble(TEMP = CLUSTER_VARIABLES) %>%
+  separate(TEMP, into = c("SC", "DISP"), sep = "_") %>%
+  mutate(SC    = str_sub(SC, -1, -1),
+         LABEL = "(Clustering variable)")
+
+st_write(RCI_MASTER, "./RESULTS/RCI_MASTER/RCI_MASTER.shp", append = FALSE)
+write_csv(CLUSTER_VARIABLES, "./RESULTS/CLUSTER_VARIABLES.csv")
+
+# ~~~~~~~~~~~~~~~~~~~~ ####
+# ~~~~~~ ><{{{°> ~~~~~ ####
+# ~~~~~~~~~~~~~~~~~~~~ ####
+# RESILIENCE ####
+
+## MULTILAYER GRAPHS ####
+
+LAYERS  <- list()
+YEARS   <- as.character(c(1817, 1857, 1875, 1910, 1965, 1996, 2022))
+
+DISP    <- c("EUC", "PD", "SDM", "MDM")
+SC      <- c("SC1", "SC2", "SC3", "SC4")
+
+CONFIGS <- tidyr::crossing(DISP, SC) %>%
+  unite("CONFIGS", DISP, SC, sep = "_") %>%
+  filter(!CONFIGS %in% c("MDM_SC3", "MDM_SC4", "SDM_SC4")) %>%
+  pull(CONFIGS)
+
+MULTI_GRAPHS <- list()
+EDGE_WEIGHTS <- tibble(YEAR = numeric(), CONF = character(), TYPE = character(), MEAN = numeric())
+
+GRAPHS_SINGLE <- list(
+
+  "1817" = GRAPH_1817,
+  "1857" = GRAPH_1857,
+  "1875" = GRAPH_1875,
+  "1910" = GRAPH_1910,
+  "1965" = GRAPH_1965,
+  "1996" = GRAPH_1996,
+  "2022" = GRAPH_2022
+
+)
+
+NODES  <- list(
+
+  "1817" = NODES_1817,
+  "1857" = NODES_1857,
+  "1875" = NODES_1875,
+  "1910" = NODES_1910,
+  "1965" = NODES_1965,
+  "1996" = NODES_1996,
+  "2022" = NODES_2022
+
+)
+
+RCI_LIM <- RCI_MASTER %>%
+  st_drop_geometry() %>%
+  filter(WB_TYPE!= "CO") %>%
+  dplyr::select(FID, YEAR, SC, DISP, NUM) %>%
+  mutate(SC = paste0("SC", SC)) %>%
+  mutate(CONFIG = paste(DISP, SC, sep = "_")) %>%
+  group_by(CONFIG) %>%
+  summarise(RCI_MAX = max(NUM, na.rm = TRUE), .groups = "drop")
+
+DIST_LIM <- tibble(CONFIG = character(), DIST_MAX = numeric())
+
+for (conf in CONFIGS) {
+
+  GLOBAL_MAX <- 0
+
+  for (year in YEARS) {
+
+    G <- GRAPHS_SINGLE[[year]]
+
+    CONF     <- str_split(conf, "_")[[1]][2]
+    CONF_INT <- sub(".*(.)$", "\\1", CONF)
+    CONF_LAB <- paste("DSC", CONF_INT, sep = "")
+
+    EDGE_NODES <- ends(G, E(G), names = FALSE)
+
+    VERTEX_ATTR <- vertex_attr(G, CONF_LAB)
+
+    WEIGHT <- (0.5 * VERTEX_ATTR[EDGE_NODES[, 1]] + 0.5 * VERTEX_ATTR[EDGE_NODES[, 2]])
+
+    YEAR_MAX <- max(WEIGHT, na.rm = TRUE)
+
+    if (YEAR_MAX > GLOBAL_MAX) {
+      GLOBAL_MAX <- YEAR_MAX
+    }
+
+  }
+
+  DIST_LIM <- rbind(DIST_LIM, tibble(CONFIG = conf, DIST_MAX = GLOBAL_MAX))
+
+}
+
+for (year in 1:length(YEARS)) {
+
+  cat("Preparing layers for ", YEARS[year], "\n")
+  LAYERS[[year]] <- list()
+
+  for (conf in 1:length(CONFIGS)) {
+
+    LAYERS[[year]][[conf]] <- list()
+    CONF                   <- str_split(CONFIGS[conf], pattern = "_")[[1]][2]
+    CONF_INT               <- sub(".*(.)$", "\\1", CONF)
+    CONF_LAB               <- paste("DSC", CONF_INT, sep = "")
+    G                      <- GRAPHS_SINGLE[[YEARS[year]]]
+
+    for(att in setdiff(vertex_attr_names(G), c("name", CONF_LAB))) {
+      G <- delete_vertex_attr(G, att)
+    }
+
+    for (att in edge_attr_names(G)) {
+      G <- delete_edge_attr(G, att)
+    }
+
+    RCI_MASTER_TEMP <- RCI_MASTER %>%
+      st_drop_geometry() %>%
+      dplyr::select(FID, YEAR, SC, CC, DISP, NUM) %>%
+      mutate(SC     = paste0("SC", SC),
+             CONFIG = CONFIGS[conf],
+             CC     = ifelse(is.na(CC), 5, CC)) %>%
+      filter(
+        YEAR == YEARS[year],
+        DISP == str_split(CONFIGS[conf], "_")[[1]][1],
+        SC   == str_split(CONFIGS[conf], "_")[[1]][2]
+      )
+
+    VERTEX_ATTR <- vertex_attr(G) %>%
+      as_tibble() %>%
+      left_join(RCI_MASTER_TEMP %>% mutate(FID = as.character(FID)), by = c("name" = "FID")) %>%
+      dplyr::select(-name)
+
+    EDGE_NODES <- ends(G, E(G), names = FALSE)
+    WEIGHT     <- (0.5 * dplyr::pull(VERTEX_ATTR, 1)[EDGE_NODES[, 1]] + 0.5 * dplyr::pull(VERTEX_ATTR, 1)[EDGE_NODES[, 2]])
+
+    CONFIG                      <- CONFIGS[conf]
+
+    RCI_LIM_CURR                <- RCI_LIM %>% filter(CONFIG == CONFIGS[conf])
+    RCI                         <- VERTEX_ATTR$NUM
+    RCI_S                       <- VERTEX_ATTR$NUM / RCI_LIM_CURR$RCI_MAX
+    CC                          <- VERTEX_ATTR$CC
+    G                           <- set_vertex_attr(G, name = "RCI", value = RCI)
+    G                           <- set_vertex_attr(G, name = "RCI_S", value = RCI_S)
+    G                           <- set_vertex_attr(G, name = "CC", value = CC)
+
+    WEIGHT_LIM_CURR             <- DIST_LIM %>% filter(CONFIG == CONFIGS[conf])
+    WEIGHT_S                    <- WEIGHT / WEIGHT_LIM_CURR$DIST_MAX
+    G                           <- set_edge_attr(G, name = "WEIGHT", value = WEIGHT)
+    G                           <- set_edge_attr(G, name = "WEIGHT_S", value = WEIGHT_S)
+
+    G                           <- delete_vertex_attr(G, CONF_LAB)
+
+    DISP_MODE <- str_split(CONFIGS[conf], "_")[[1]][1]
+
+    if (DISP_MODE != "PD") {
+
+      E_DF                       <- igraph::as_data_frame(G, what = "edges")
+      E_RECIP                    <- E_DF
+      E_RECIP[, c("from", "to")] <- E_DF[, c("to", "from")]
+
+      G <- igraph::graph_from_data_frame(
+        d        = rbind(E_DF, E_RECIP),
+        directed = TRUE,
+        vertices = igraph::as_data_frame(G, what = "vertices")
+      )
+      G <- igraph::simplify(G, edge.attr.comb = "first")
+
+    }
+
+    LAYERS[[year]][[conf]][[1]] <- YEARS[year]
+    LAYERS[[year]][[conf]][[2]] <- CONFIGS[conf]
+    LAYERS[[year]][[conf]][[3]] <- G
+
+  }
+
+}
+
+for (year in 1:length(YEARS)) {
+
+  for (conf in 1:length(CONFIGS)) {
+
+    W            <- E(LAYERS[[year]][[conf]][[3]])$WEIGHT
+    W_S          <- E(LAYERS[[year]][[conf]][[3]])$WEIGHT_S
+
+    EDGE_WEIGHTS <- bind_rows(
+      EDGE_WEIGHTS,
+
+      tibble(YEAR   = as.numeric(YEARS[year]),
+             CONF   = CONFIGS[conf],
+             TYPE   = "W",
+             MEAN   = mean(W[W > 0])),
+
+      tibble(YEAR   = as.numeric(YEARS[year]),
+             CONF   = CONFIGS[conf],
+             TYPE   = "W_S",
+             MEAN   = mean(W[W_S > 0]))
+    )
+
+  }
+}
+
+for (year in 1:length(YEARS)) {
+
+  cat("Preparing multilayer graph for", YEARS[[year]], "\n")
+
+  MULTI_GRAPHS[[year]]  <- list()
+  MULTI_GRAPHS_YEAR     <- NULL
+  TOTAL_V               <- 0
+
+  for (conf in 1:length(CONFIGS)) {
+
+    G_CONF          <- LAYERS[[year]][[conf]][[3]]
+    V(G_CONF)$LAYER <- CONFIGS[conf]
+    V(G_CONF)$REACH <- V(G_CONF)$name
+    V(G_CONF)$name  <- paste0(V(G_CONF)$name, "_", CONFIGS[conf])
+
+    if (is.null(MULTI_GRAPHS_YEAR)) {
+
+      MULTI_GRAPHS_YEAR <- G_CONF
+      TOTAL_V           <- vcount(G_CONF)
+
+    } else {
+
+      N_CURR            <- vcount(G_CONF)
+      CURR_REACH        <- V(G_CONF)$REACH
+      MULTI_GRAPHS_YEAR <- igraph::disjoint_union(MULTI_GRAPHS_YEAR, G_CONF)
+      PREV_IDX          <- 1:TOTAL_V
+      PREV_REACH        <- V(MULTI_GRAPHS_YEAR)$REACH[PREV_IDX]
+      MATCH_LIST        <- split(PREV_IDX, PREV_REACH)
+
+      INTER_EDGES_LIST  <- lapply(seq_along(CURR_REACH), function(i) {
+        reach_id   <- CURR_REACH[i]
+        prev_nodes <- MATCH_LIST[[reach_id]]
+
+        if (!is.null(prev_nodes)) {
+          return(cbind(prev_nodes, TOTAL_V + i))
+        }
+
+        return(NULL)
+
+      })
+
+      INTER_EDGES       <- do.call(rbind, INTER_EDGES_LIST)
+      INTER_EDGES_BOTH  <- rbind(INTER_EDGES, INTER_EDGES[, 2:1])
+      MULTI_GRAPHS_YEAR <- igraph::add_edges(MULTI_GRAPHS_YEAR, t(INTER_EDGES_BOTH))
+      IDX               <- (ecount(MULTI_GRAPHS_YEAR) - nrow(INTER_EDGES_BOTH) + 1):ecount(MULTI_GRAPHS_YEAR)
+      W                 <- filter(EDGE_WEIGHTS, YEAR == YEARS[year], CONF == CONFIGS[conf], TYPE == "W") %>% pull(MEAN)
+      W_S               <- filter(EDGE_WEIGHTS, YEAR == YEARS[year], CONF == CONFIGS[conf], TYPE == "W_S") %>% pull(MEAN)
+
+      edge_attr(MULTI_GRAPHS_YEAR, "WEIGHT",   IDX) <- W
+      edge_attr(MULTI_GRAPHS_YEAR, "WEIGHT_S", IDX) <- W_S
+
+      TOTAL_V           <- TOTAL_V + N_CURR
+
+    }
+  }
+
+  MULTI_GRAPHS[[year]] <- list(
+    YEAR = YEARS[year],
+    G    = MULTI_GRAPHS_YEAR
+  )
+
+}
+
+## METRICS ####
+### ROBUSTNESS ####
+
+# For a continuous progress update open the log-file via the windows console:
+# powershell -command Get-Content 'ADD_PATH\PROGRESS_LOG_ROBUSTNESS.txt' -Wait
+
+plan(multisession, workers = floor(parallel::detectCores() * 2/3))
+
+N_SRC     <- 100
+N_REPS    <- 100
+YEARS     <- c(1817, 1857, 1875, 1910, 1965, 1996, 2022)
+STEP_SIZE <- 1000
+LOG_FILE  <- "PROGRESS_LOG_ROBUSTNESS.txt"
+
+cat("Starting robustness analysis\n", file = LOG_FILE, append = FALSE)
+
+ROBUSTNESS_LIST <- vector("list", length(YEARS))
+
+for (year in seq_along(YEARS)) {
+
+  CURRENT_YEAR <- YEARS[year]
+  GRAPH        <- MULTI_GRAPHS[[year]]$G
+  N0           <- vcount(GRAPH)
+  ATTACK_STEPS <- seq(0, N0, by = STEP_SIZE)
+  NUM_STEPS    <- length(ATTACK_STEPS)
+
+  NODE_METADATA <- data.frame(
+    INDEX = seq_len(vcount(GRAPH)),
+    RCI   = vertex_attr(GRAPH, "RCI_S"),
+    LAYER = vertex_attr(GRAPH, "LAYER")
+  )
+
+  ATTACK_ORDER_DATA <- NODE_METADATA %>%
+    group_by(LAYER) %>%
+    mutate(LAYER_RANK = rank(RCI, ties.method = "random")) %>%
+    ungroup() %>%
+    arrange(LAYER_RANK, LAYER)
+
+  ATTACK_ORDER_TARGETED <- ATTACK_ORDER_DATA$INDEX
+
+  cat(sprintf("\nCalculating robustness for %d\n", CURRENT_YEAR))
+
+  YEAR_RESULTS <- future_lapply(seq_len(N_REPS), function(rep) {
+
+    gc()
+    REP_RESULTS  <- vector("list", NUM_STEPS)
+    ATTACK_ORDER <- ATTACK_ORDER_TARGETED
+
+    for (step in seq_along(ATTACK_STEPS)) {
+      T_STEP_START  <- Sys.time()
+      NODES_REMOVED <- ATTACK_STEPS[step]
+
+      if (NODES_REMOVED == 0) {
+
+        G_SUB <- GRAPH
+
+      } else {
+
+        NODES_TO_REMOVE <- ATTACK_ORDER[1:NODES_REMOVED]
+        G_SUB <- delete_vertices(GRAPH, NODES_TO_REMOVE)
+
+      }
+
+      N_NODES <- vcount(G_SUB)
+
+      if (N_NODES > 1) {
+        SRC <- sample.int(N_NODES, min(N_SRC, N_NODES))
+
+        D <- distances(G_SUB, v = SRC, to = seq_len(N_NODES), weights = E(G_SUB)$WEIGHT_S)
+
+        DIST <- as.vector(D)
+        DIST <- DIST[DIST > 0 & is.finite(DIST)]
+
+        EF <- if (length(DIST)) sum(1 / DIST) else NA_real_
+      } else {
+        EF    <- NA_real_
+        DIST <- NA_real_
+        SRC   <- integer(0)
+      }
+
+      NR_PATHS <- length(SRC) * N_NODES
+
+      REP_RESULTS[[step]] <- list(
+        YEAR         = CURRENT_YEAR,
+        REPLICATE    = rep,
+        REMOVED      = NODES_REMOVED,
+        NODES_LEFT   = N_NODES,
+        DIST_SUM     = sum(DIST, na.rm = TRUE),
+        DIST_MEDIAN  = median(DIST, na.rm = TRUE),
+        DIST_MEAN    = mean(DIST, na.rm = TRUE),
+        DIST_SD      = sd(DIST, na.rm = TRUE),
+        NR_PATHS     = NR_PATHS
+      )
+
+      T_STEP_END <- Sys.time()
+      STEP_TIME  <- as.numeric(difftime(T_STEP_END, T_STEP_START, units = "secs"))
+      cat(
+        sprintf("[%s] Year: %d | Rep: %d/%d | Step: %d/%d | Removed: %d | Time: %.2fs\n",
+                T_STEP_END, CURRENT_YEAR, rep, N_REPS, step, NUM_STEPS, NODES_REMOVED, STEP_TIME),
+        file = LOG_FILE, append = TRUE
+      )
+    }
+
+    return(rbindlist(REP_RESULTS))
+
+  }, future.seed = TRUE, future.chunk.size = 1)
+
+  ROBUSTNESS_LIST[[year]] <- rbindlist(YEAR_RESULTS)
+}
+
+ROBUSTNESS <- rbindlist(ROBUSTNESS_LIST)
+write_rds(ROBUSTNESS, "./RESULTS/ROBUSTNESS.rds")
+
+### DISSIMILARITY ####
+
+LAYER_DIS <- list()
+
+for (year in 1:length(YEARS)) {
+
+  cat("Processing", YEARS[year], "\n")
+
+  G        <- MULTI_GRAPHS[[year]]$G
+  LAYER_ID <- unique(V(G)$LAYER)
+  NODE_IDS <- V(G)$REACH
+
+  RCI_MAT           <- matrix(NA, nrow = length(unique(NODE_IDS)), ncol = length(LAYER_ID))
+  rownames(RCI_MAT) <- unique(NODE_IDS)
+  colnames(RCI_MAT) <- LAYER_ID
+
+  for (layer in LAYER_ID) {
+
+    i                     <- which(V(G)$LAYER == layer)
+    NODES                 <- NODE_IDS[i]
+    RCI_MAT[NODES, layer] <- V(G)$RCI_S[i]
+
+  }
+
+  DIS_MAT           <- as.matrix(dist(t(RCI_MAT), method = "euclidean"))
+  LAYER_DIS[[year]] <- DIS_MAT
+
+}
+
+DISSIMILARITY <- map2_dfr(
+  LAYER_DIS,
+  YEARS,
+  function(D, year) {
+    TIBBLE <- as_tibble(as.table(D), .name_repair = "minimal")
+    names(TIBBLE) <- c("CONFIG_1", "CONFIG_2", "DISSIMILARITY")
+    TIBBLE %>%
+      filter(CONFIG_1 < CONFIG_2) %>%
+      mutate(YEAR = year)
+  }
+)
+
+write_csv(DISSIMILARITY, "./RESULTS/DISSIMILARITY.csv")
+
+### MODULARITY ####
+
+MODULARITY <- tibble(
+  YEAR = YEARS,
+  MD   = NA
+)
+
+for (year in 1:length(YEARS)) {
+  
+  gc()
+  cat("Calculating modularity for ", YEARS[[year]], "\n")
+  
+  G           <- LAYERS[[year]][[1]][[3]]
+  G           <- as_undirected(G, mode = "collapse", edge.attr.comb = "ignore")
+  E_DF        <- igraph::as_data_frame(G, what = "edges") %>%
+    dplyr::select(from, to)
+  
+  VERTEX_ATTR <- tibble(name = V(G)$name, CC = as.numeric(V(G)$CC)) %>%
+    left_join(NODES[[YEARS[year]]] %>%
+                st_drop_geometry() %>%
+                mutate(name = as.character(FID)) %>%
+                dplyr::select(name, LENGTH),
+              by = "name")
+  
+  CONNECTORS  <- VERTEX_ATTR %>%
+    filter(CC == 5) %>%
+    pull(name)
+  
+  G_CON       <- induced_subgraph(G, CONNECTORS)
+  CON_GROUPS  <- decompose(G_CON)
+  E_CON       <- list()
+  
+  for (group in 1:length(CON_GROUPS)) {
+    
+    CON   <- V(CON_GROUPS[[group]])$name
+    REACH <- unique(c(E_DF$to[E_DF$from %in% CON], E_DF$from[E_DF$to %in% CON]))
+    REACH <- setdiff(REACH, CONNECTORS)
+    
+    if (length(REACH) > 1) {
+      PAIRS          <- combn(REACH, 2)
+      E_CON[[group]] <- tibble(from = PAIRS[1, ], to = PAIRS[2, ])
+    }
+    
+  }
+  
+  E_DIRECT    <- E_DF %>%
+    filter(!from %in% CONNECTORS, !to %in% CONNECTORS)
+  
+  H           <- graph_from_data_frame(
+    
+    d        = rbind(E_DIRECT, bind_rows(E_CON)),
+    
+    vertices = VERTEX_ATTR %>% filter(CC != 5),
+    
+    directed = F)
+  
+  H           <- igraph::simplify(H)
+  
+  EDGE_NODES  <- ends(H, E(H), names = FALSE)
+  WEIGHT      <- (0.5 * V(H)$LENGTH[EDGE_NODES[, 1]] + 0.5 * V(H)$LENGTH[EDGE_NODES[, 2]])
+  
+  W_INV               <- 1 / (WEIGHT + 10e-6)
+  CC_FROM             <- V(H)$CC[EDGE_NODES[, 1]]
+  CC_TO               <- V(H)$CC[EDGE_NODES[, 2]]
+  A                   <- sapply(1:4, function(cc) (sum(W_INV[CC_FROM == cc]) + sum(W_INV[CC_TO == cc])) / (2 * sum(W_INV)))
+  MD                  <- igraph::modularity(H, membership = V(H)$CC, weights = W_INV, directed = FALSE)
+  MODULARITY$MD[year] <- MD / (1 - sum(A^2))
+  
+}
+
+write_csv(MODULARITY, "./RESULTS/MODULARITY.csv")
+
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # ~~~~~~ ><{{{°> ~~~~~ ####
 # ~~~~~~~~~~~~~~~~~~~~ ####       
@@ -2772,6 +2825,8 @@ BOXES <- tribble(
   BOX_L,              Y_C_TOP,        "C"
 )
 
+SEPARATORS <- tibble(Y = c(Y_C_TOP, Y_B_TOP) + BOX_GAP / 2)
+
 #### MAPS ####
 
 THEME_MAP <- theme_void() +
@@ -2910,7 +2965,7 @@ NORTH_GROB <- gTree(children = ggspatial::north_arrow_orienteering(line_width = 
 #### PLOTTING ####
 
 P_SITE <- ggplot() +
-  geom_rect(data = BOXES, aes(xmin = BOX_L, xmax = BOX_R, ymin = YMIN, ymax = YMAX), fill = "#EBEBEB") +
+  geom_segment(data = SEPARATORS, aes(x = BOX_L, xend = BOX_R, y = Y, yend = Y), colour = "grey40", linewidth = 1.2) +
   place(P_NET, NET_FRAME) +
   place(P_AUT, AUT_FRAME) +
   place(P_EUR, EUR_FRAME) +
@@ -2943,7 +2998,7 @@ P_SITE <- ggplot() +
     plot.margin     = margin(0, 0, 0, 0)
   )
 
-ggsave(P_SITE, filename = "./PLOTS/L2.png", width = FIG_W, height = FIG_H, unit = "mm", dpi = 600)
+ggsave(P_SITE, filename = "./PLOTS/STUDY_SITE.png", width = FIG_W, height = FIG_H, unit = "mm", dpi = 600)
 ### CC ####
 
 YEAR_LEVELS                     <- sort(unique(RCI_MASTER$YEAR))
@@ -3106,7 +3161,6 @@ P_CC_1 <- ggplot() +
 
   scale_x_continuous(expand = expansion(mult = c(.0025, .018))) +
   scale_y_continuous(expand = expansion(mult = c(.03, 0))) +
-
 
   scale_fill_manual(
     values = c("#468892", "#74F3D3","#751C6D",  "#FF3BD5"),
@@ -3286,7 +3340,6 @@ WB_TYP_AREA$WB_TYPE <- factor(WB_TYP_AREA$WB_TYPE,
                                          "ple_0",
                                          "tri_0",
                                          "art_0"))
-
 
 CCI_MASTER_PLOT <- CCI_MASTER %>%
   group_by(DISP, SC) %>%
@@ -3616,7 +3669,7 @@ P_ROB <- ggplot(ROBUSTNESS_PLOT,
                                       "grey30"), 1), guide = "none") +
   theme(
     strip.text        = element_text(size = 6, color = "grey40", face = "bold"),
-    plot.margin       = margin(0, 9, 1, 0),
+    plot.margin       = margin(0, 5, 0, 5),
     axis.text.y       = element_text(size = 6, color = "grey40"),
     axis.text.x       = element_text(size = 6, color = "grey40", angle = 45, vjust = 1.1, hjust = 1.05),
     axis.ticks        = element_line(color = "grey40"),
@@ -3643,7 +3696,7 @@ P_DISS <- ggplot(DISSIMILARITY, aes(x = as.numeric(YEAR), y = DISSIMILARITY, fil
                                "#9F6619",
                                "grey40"), guide = "none") +
   theme(
-    plot.margin       = margin(0, 5, 17, 5),
+    plot.margin       = margin(0, 5, 0, 5),
     axis.text.y       = element_text(size = 6, color = "grey40"),
     axis.text.x       = element_text(size = 6, color = "grey40", angle = 45, vjust = 1.1, hjust = 1.05),
     axis.ticks        = element_line(color = "grey40"),
@@ -3661,7 +3714,7 @@ P_DISS <- ggplot(DISSIMILARITY, aes(x = as.numeric(YEAR), y = DISSIMILARITY, fil
 P_MOD <- ggplot(MODULARITY, aes(x = as.numeric(YEARS), y = MD, fill = as.factor(YEAR))) +
   geom_bar(stat = "identity", alpha = .8, color = "grey40", linewidth = .3) +
   scale_x_continuous(breaks = c(1817, 1857, 1875, 1910, 1965, 1996, 2022)) +
-  scale_y_continuous(name = "CC Modularity") +
+  scale_y_continuous(name = "Normalized CC modularity") +
   scale_fill_manual(values = c("#468892",
                                "#74F3D3",
                                "#751C6D",
@@ -3669,8 +3722,9 @@ P_MOD <- ggplot(MODULARITY, aes(x = as.numeric(YEARS), y = MD, fill = as.factor(
                                "#FDC067",
                                "#9F6619",
                                "grey40"), name = "Year") +
+  coord_cartesian(ylim = c(.7, 1)) +
   theme(
-    plot.margin       = margin(0, 0, 17, 10),
+    plot.margin       = margin(0, 5, 0, 5),
     axis.text.y       = element_text(size = 6, color = "grey40"),
     axis.text.x       = element_text(size = 6, color = "grey40", angle = 45, vjust = 1.1, hjust = 1.05),
     axis.ticks        = element_line(color = "grey40"),
@@ -3708,15 +3762,10 @@ P_MOD        <- P_MOD + theme(legend.position = "none")
 
 ### ROB. + DISSIM. + MOD. ####
 
-RESILIENCE <- ggpubr::ggarrange(P_ROB, P_DISS, P_MOD, nrow = 1, widths = c(.985,1,1.025)) +
-  theme(plot.background = element_rect(fill = "white", color = NA),
-        plot.margin = margin(-40,1,-50,1))
+RESILIENCE <- LEGEND_YEARS / (P_ROB + P_DISS + P_MOD) +
+  plot_layout(heights = c(.1, 1))
 
-RESILIENCE <- ggpubr::ggarrange(LEGEND_YEARS, RESILIENCE, ncol = 1, heights = c(.1, 1)) +
-  theme(plot.background = element_rect(fill = "white", color = NA),
-        plot.margin = margin(2,0,0,0))
-
-ggsave(RESILIENCE, filename= "./PLOTS/RESILIENCE.png", width= 174, height= 72, unit= "mm", dpi = 600)
+ggsave(RESILIENCE, filename= "./PLOTS/RESILIENCE.png", width= 174, height= 72, unit= "mm", dpi = 600, bg = "white")
 
 ### SC ####
 
@@ -4352,8 +4401,8 @@ TEXT <- tribble(
   "DIS",   3,    "body",    6.4, "Passive dispersal",
   "DIS",   4,    "code",    0,   "EUC",
   "DIS",   4,    "body",    6.4, "Flying, overland",
-  "DIS",   5,    "fnote",   0,   "*Medium dist. migrators",
-  "DIS",   6,    "fnote",   0,   "**Short dist. migrators",
+  "DIS",   5,    "fnote",   0,   "*Medium dist. migrants",
+  "DIS",   6,    "fnote",   0,   "**Short dist. migrants",
   "BAR",   1,    "bodyvar", 0,   "'Transversal barriers '*bold('m')~'with'",
   "BAR",   2,    "math",    0,   "'asymmetric passability '*bold(p[m])",
   "BAR",   3,    "body",    0,   "(upstream and downstream)",
@@ -4390,7 +4439,7 @@ TEXT <- tribble(
   "CCI",   3,    "display", 0,   "$\\displaystyle CCI = \\sum_{i=1}^{n} \\sum_{j=1}^{n} B_{ij}\\;c_{ij}\\;w_i\\;w_j$",
   "CLU",   1,    "bodyvar", 0,   "bold('RCI')~'configurations grouped across'",
   "CLU",   2,    "bodyvar", 0,   "'years into four'~bold('CCs')*':'",
-  "CLU",   3,    "bodyvar", 0,   "'7 '*bold('RCIs')*' (Kendall \u03c4 \u2264 0.7),'",
+  "CLU",   3,    "bodyvar", 0,   "'6 '*bold('RCIs')*' (Kendall \u03c4 \u2264 0.7),'",
   "CLU",   4,    "body",    0,   "z and ln(x + 2) transformed",
   "MUL",   1,    "bodyvar", 0,   "'One layer per '*bold('RCI')*' configuration (13),'",
   "MUL",   2,    "body",    0,   "same topology, linked across layers",
@@ -4399,7 +4448,7 @@ TEXT <- tribble(
   "MOD",   1,    "body",    0,   "Spatial modularity of CCs",
   "MOD",   2,    "body",    0,   "describing habitats with similar",
   "MOD",   3,    "body",    0,   "functionality per year",
-  "MOD",   4,    "foot",    0,   "\u2191 modularity: functional isolation",
+  "MOD",   4,    "foot",    0,   "\u2191 modularity: spatial segregation",
   "ROB",   1,    "body",    0,   "Reachability adjusted mean",
   "ROB",   2,    "body",    0,   "path length following node",
   "ROB",   3,    "bodyvar", 0,   "'removal by increasing'~bold('RCI')",
@@ -4766,6 +4815,7 @@ ICON_THEME <- theme_void() +
 P_MOD_ICON <- ggplot(MODULARITY, aes(x = as.numeric(YEAR), y = MD, fill = as.factor(YEAR))) +
   geom_col(colour = INK, alpha = .8, linewidth = .15) +
   scale_fill_manual(values = YEAR_COLOURS) +
+  coord_cartesian(ylim = c(.7, 1)) +
   ICON_THEME
 
 P_ROB_ICON <- ggplot(ROBUSTNESS_PLOT, aes(x = REMOVED, group = as.factor(YEAR))) +
