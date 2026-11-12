@@ -250,6 +250,31 @@ add_identity_edges <- function(ml) {
   return(ml)
 }
 
+PANEL_MM <- 48
+
+pair_plot <- function(PLOT_A, PLOT_B, GAP = 10, FIG_W = 174, PAD = 1) {
+  G <- list(ggplotGrob(PLOT_A), ggplotGrob(PLOT_B))
+  D <- map_dfr(G, function(X) {
+    P <- X$layout[grepl("^panel", X$layout$name), ][1, ]
+    tibble(
+      B = convertHeight(sum(X$heights[(P$b + 1):length(X$heights)]), "mm", valueOnly = TRUE),
+      W = convertWidth(sum(X$widths), "mm", valueOnly = TRUE),
+      H = convertHeight(sum(X$heights), "mm", valueOnly = TRUE)
+    )
+  })
+  Y0    <- PAD + max(D$B)
+  FIG_H <- Y0 + max(D$H - D$B) + PAD
+  X0    <- (FIG_W - sum(D$W) - GAP) / 2
+  XS    <- c(X0, X0 + D$W[1] + GAP)
+  P <- ggplot() +
+    annotation_custom(G[[1]], xmin = XS[1], xmax = XS[1] + D$W[1], ymin = Y0 - D$B[1], ymax = Y0 - D$B[1] + D$H[1]) +
+    annotation_custom(G[[2]], xmin = XS[2], xmax = XS[2] + D$W[2], ymin = Y0 - D$B[2], ymax = Y0 - D$B[2] + D$H[2]) +
+    coord_fixed(xlim = c(0, FIG_W), ylim = c(0, FIG_H), expand = FALSE) +
+    theme_void() +
+    theme(plot.background = element_rect(fill = "white", colour = NA))
+  list(PLOT = P, HEIGHT = FIG_H)
+}
+
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # ~~~~~~ ><{{{°> ~~~~~ ####
 # ~~~~~~~~~~~~~~~~~~~~ ####       
@@ -2503,6 +2528,24 @@ BARRIERS <- st_read("./PLOTS/BARRIERS/BARRIERS.shp") %>% st_transform(crs = 3128
 LAKES    <- st_read("./PLOTS/LAKES/LAKES.shp") %>% st_transform(crs = 31287) %>% st_zm() %>% filter(log(Shape_Area) >= 15) %>% st_intersection(AUT_10)
 RIVERS   <- st_read("./PLOTS/RIVERS/RIVERS.shp") %>% st_transform(crs = 31287) %>% st_zm() %>% st_intersection(AUT_10)
 
+options(timeout = 900)
+HYBAS_ZIP <- file.path(tempdir(), "hybas_eu_lev05_v1c.zip")
+download.file("https://data.hydrosheds.org/file/hydrobasins/standard/hybas_eu_lev05_v1c.zip", HYBAS_ZIP, mode = "wb")
+unzip(HYBAS_ZIP, exdir = tempdir())
+HYBAS <- st_read(file.path(tempdir(), "hybas_eu_lev05_v1c.shp"))
+
+sf_use_s2(FALSE)
+
+DANUBE_ID <- HYBAS$MAIN_BAS[lengths(st_intersects(HYBAS, st_sfc(st_point(c(16.37, 48.21)), crs = 4326))) > 0]
+DANUBE_BASIN <- HYBAS %>%
+  filter(MAIN_BAS == DANUBE_ID) %>%
+  st_make_valid() %>%
+  st_union() %>%
+  st_sf(geometry = .) %>%
+  st_transform(crs = 31287)
+  
+sf_use_s2(TRUE)
+
 HABITATS <- NODES_2022 %>%
   filter(WB_TYPE != "CO") %>%
   mutate(WB_TYPE = paste0(WB_TYPE, "_", IMP)) %>%
@@ -2589,6 +2632,7 @@ ICON_LAYER <- function(ICON, X, Y, HEIGHT, HJUST = .5, VJUST = .5, DATA = tibble
 #### DATA ####
 
 MERGE_IMPOUNDED <- TRUE
+FACET_STYLE     <- TRUE
 
 HABITAT_KEY <- tribble(
   ~WB_TYPE, ~COLOUR,   ~LABEL,
@@ -2605,15 +2649,16 @@ HABITAT_KEY <- tribble(
 )
 
 TIMELINE <- tribble(
-  ~YEAR, ~EVENT,
-  1817,  "Unregulated",
-  1857,  "Regulation onset",
-  1875,  "First sections regulated",
-  1910,  "HQ1 regulation",
-  1965,  ">HQ1 regulation (except east of Vienna)",
-  1996,  "Max. regulation",
-  2022,  "Restoration ongoing"
-)
+  ~YEAR, ~EVENT,                                     ~RI,
+  1817,  "Unregulated",                              4.7,
+  1857,  "Regulation onset",                         56.3,
+  1875,  "First sections regulated",                 65.6,
+  1910,  "HQ1 regulation",                           66.5,
+  1965,  ">HQ1 regulation (except east of Vienna)",  92.2,
+  1996,  "Max. regulation",                          93.8,
+  2022,  "Restoration ongoing",                      90.3
+) %>%
+  mutate(EVENT = paste0(EVENT, "\nRI = ", sprintf("%.1f", RI), "%"))
 
 if (MERGE_IMPOUNDED) HABITAT_KEY <- filter(HABITAT_KEY, !grepl("_1$", WB_TYPE))
 
@@ -2649,7 +2694,6 @@ BARRIERS_2022 <- BARRIERS %>%
   shift_y(-Y_OFFSET)
 
 IMP_WIDTH  <- 2250
-HATCH_STEP <- 700
 
 MAIN_CHANNEL <- NODES_2022 %>%
   filter(WB_TYPE == "eua") %>%
@@ -2701,21 +2745,6 @@ IMPOUNDMENTS <- IMP_ZONES %>%
   filter(as.numeric(st_area(.)) > 1e7) %>%
   shift_y(-Y_OFFSET)
 
-hatch <- function(POLYGONS, STEP) {
-  BOX <- st_bbox(POLYGONS)
-  X   <- c(BOX[["xmin"]], BOX[["xmax"]])
-  bind_rows(
-    tibble(DIR = 1,  C = seq(BOX[["ymin"]] - BOX[["xmax"]], BOX[["ymax"]] - BOX[["xmin"]], by = STEP)),
-    tibble(DIR = -1, C = seq(BOX[["ymin"]] + BOX[["xmin"]], BOX[["ymax"]] + BOX[["xmax"]], by = STEP))
-  ) %>%
-    pmap(function(DIR, C) st_linestring(cbind(X, C + DIR * X))) %>%
-    st_sfc(crs = st_crs(POLYGONS)) %>%
-    st_intersection(st_union(POLYGONS)) %>%
-    st_collection_extract("LINESTRING")
-}
-
-IMP_HATCH <- hatch(IMPOUNDMENTS, HATCH_STEP)
-
 NET_YEARS <- tibble(
   YEAR = c(1817, 2022),
   DY   = c(0, -Y_OFFSET)
@@ -2738,6 +2767,37 @@ END_MARKS <- tribble(
     YEND = YEND + DY
   )
 
+DAM_LABELS <- BARRIERS_2022 %>%
+  mutate(
+    X = st_coordinates(.)[, 1],
+    Y = st_coordinates(.)[, 2]
+  ) %>%
+  st_drop_geometry() %>%
+  arrange(X) %>%
+  mutate(
+    NUM   = row_number(),
+    LABEL = c("Altenwörth", "Greifenstein", "Nußdorf", "Freudenau"),
+    DX    = c(0, 0, -1900, -1500),
+    DY    = c(-3300, -3700, 0, -1900)
+  )
+
+PLACES <- tribble(
+  ~LABEL,         ~LON,    ~LAT,    ~X_LAB,  ~Y_LAB,  ~HJUST, ~FACE,
+  "Melk",         15.3370, 48.2272, -73935,  325184,  .5,     "bold",
+  "Vienna",       16.3725, 48.2084, 2200,    323612,  1,      "bold",
+  "Danube Canal", 16.4082, 48.2000, 1500,    317600,  .5,     "plain",
+  "Old Danube",   16.4248, 48.2383, 11800,   328400,  0,      "plain",
+  "Lobau",        16.5350, 48.1686, 19500,   319700,  0,      "plain"
+) %>%
+  st_as_sf(coords = c("LON", "LAT"), crs = 4326) %>%
+  st_transform(st_crs(NETWORK)) %>%
+  shift_y(-Y_OFFSET) %>%
+  mutate(
+    X = st_coordinates(.)[, 1],
+    Y = st_coordinates(.)[, 2]
+  ) %>%
+  st_drop_geometry()
+
 #### LAYOUT ####
 
 FIG_W    <- 178
@@ -2754,7 +2814,9 @@ TEXT_PT  <- 6
 TITLE_PT <- 8
 LABEL_PT <- 3 * .pt
 ELEV_H   <- 8.2
-TL_H     <- 8.6
+TL_H     <- 10
+STRIP_H  <- if (FACET_STYLE) 5 else 0
+SHADOW_A <- if (FACET_STYLE) "grey80" else "grey88"
 
 text_w <- function(LABEL, PT, FACE = "plain") {
   max(map_dbl(as.list(LABEL), ~ convertWidth(grobWidth(textGrob(.x, gp = gpar(fontsize = PT, fontface = FACE))), "mm", valueOnly = TRUE)))
@@ -2795,23 +2857,23 @@ X_L <- BOX_L + SHADOW_L + 1
 X_R <- BOX_R - PAD
 
 Y_TL     <- BOX_L + PAD + TL_H
-Y_C_TOP  <- Y_TL + TL_H + PAD
+Y_C_TOP  <- Y_TL + TL_H + PAD + STRIP_H
 Y_B_BASE <- Y_C_TOP + BOX_GAP
 
 NET_FRAME <- map_frame(NET_BOX, (X_R - X_L) / (NET_BOX[["xmax"]] - NET_BOX[["xmin"]]),
                        X0 = X_L, Y0 = Y_B_BASE + SHADOW_B, LEFT = SHADOW_L, BOTTOM = SHADOW_B, RIGHT = 1, TOP = 1)
 
-Y_B_TOP <- Y_B_BASE + SHADOW_B + (NET_BOX[["ymax"]] - NET_BOX[["ymin"]]) * NET_FRAME$S + PAD
+Y_B_TOP <- Y_B_BASE + SHADOW_B + (NET_BOX[["ymax"]] - NET_BOX[["ymin"]]) * NET_FRAME$S + PAD + STRIP_H
 
 AUT_X0 <- X_L
 H_TOP  <- (X_R - AUT_X0 - GAP + RATIO_AUT * ELEV_H) / (RATIO_AUT + RATIO_EUR)
 AUT_H  <- H_TOP - ELEV_H
 AUT_X1 <- AUT_X0 + RATIO_AUT * AUT_H
 EUR_X0 <- AUT_X1 + GAP
-Y_A0   <- Y_B_TOP + BOX_GAP + SHADOW_B
+Y_A0   <- Y_B_TOP + BOX_GAP + SHADOW_B - 3.5
 Y_ROW  <- Y_A0 + 4.2
 Y_A1   <- Y_A0 + H_TOP
-FIG_H  <- Y_A1 + PAD + BOX_L
+FIG_H  <- Y_A1 + PAD + STRIP_H + BOX_L
 
 AUT_FRAME <- map_frame(AUT_BOX, AUT_H / (AUT_BOX[["ymax"]] - AUT_BOX[["ymin"]]),
                        X0 = AUT_X0, Y0 = Y_A0 + ELEV_H, LEFT = SHADOW_L, BOTTOM = SHADOW_B, RIGHT = 1, TOP = 1)
@@ -2819,13 +2881,14 @@ EUR_FRAME <- map_frame(EUR_BOX, H_TOP / (EUR_BOX[["ymax"]] - EUR_BOX[["ymin"]]),
                        X0 = EUR_X0, Y0 = Y_A0, LEFT = SHADOW_L, BOTTOM = SHADOW_B)
 
 BOXES <- tribble(
-  ~YMIN,              ~YMAX,          ~LABEL,
-  Y_B_TOP + BOX_GAP,  FIG_H - BOX_L,  "A",
-  Y_B_BASE,           Y_B_TOP,        "B",
-  BOX_L,              Y_C_TOP,        "C"
+  ~YMIN,              ~YMAX,          ~LABEL, ~TITLE,
+  Y_B_TOP + BOX_GAP,  FIG_H - BOX_L,  "A",    "Study site location",
+  Y_B_BASE,           Y_B_TOP,        "B",    "Floodplain habitat network",
+  BOX_L,              Y_C_TOP,        "C",    "Regulation phases"
 )
 
-SEPARATORS <- tibble(Y = c(Y_C_TOP, Y_B_TOP) + BOX_GAP / 2)
+SEPARATORS <- tibble(Y = c(Y_C_TOP, Y_B_TOP) + BOX_GAP / 2) %>%
+  filter(!FACET_STYLE)
 
 #### MAPS ####
 
@@ -2844,13 +2907,14 @@ P_EUR <- ggplot() +
       geom_sf(data = EUROPE_60[!EUROPE_60$ISO3_CODE %in% c("AUT", "RUS"), ], fill = "grey97", colour = "grey40", linewidth = .3, lineend = "round"),
       x_offset = -60,
       y_offset = 120,
-      colour   = "grey80",
-      sigma    = 12),
+      colour   = SHADOW_A,
+      sigma    = 24),
     mask   = ch_alpha("aut"),
     invert = TRUE) +
   geom_raster(data = ELEV_DF_C, aes(x = X, y = Y, fill = ELEVATION)) +
   scale_fill_gradientn(colours = ELEV_COLOURS, na.value = NA, guide = "none") +
   geom_sf(data = EUROPE_60[!EUROPE_60$ISO3_CODE %in% c("AUT", "RUS"), ], fill = "grey97", colour = "grey40", linewidth = .3, lineend = "round") +
+  geom_sf(data = st_difference(DANUBE_BASIN, st_union(AUT_60)), fill = alpha("grey40", .4), colour = NA) +
   coord_sf(crs = 31287, xlim = c(EUR_FRAME$XMIN, EUR_FRAME$XMAX), ylim = c(EUR_FRAME$YMIN, EUR_FRAME$YMAX), expand = FALSE) +
   THEME_MAP
 
@@ -2859,22 +2923,21 @@ P_AUT <- ggplot() +
     geom_raster(data = ELEV_DF, aes(x = X, y = Y, fill = ELEVATION)),
     x_offset = -60,
     y_offset = 120,
-    colour   = "grey80",
-    sigma    = 12) +
+    colour   = SHADOW_A,
+    sigma    = 24) +
   scale_fill_gradientn(colours = ELEV_COLOURS, na.value = NA, guide = "none") +
   new_scale_fill() +
   geom_raster(data = HILL_DF, aes(x = X, y = Y, fill = HILLSHADE), alpha = .5) +
   scale_fill_gradient(low = "black", high = "white", na.value = NA, guide = "none") +
   geom_sf(data = LAKES, fill = "white", colour = "white") +
   geom_sf(data = RIVERS %>% filter(FLOZ %in% 2:9), aes(linewidth = FLOZ), lineend = "round", colour = "white") +
-  geom_sf(data = BBOX, colour = "grey30", fill = NA, linewidth = .5) +
+  geom_sf(data = BBOX, colour = "grey40", fill = NA, linewidth = .5) +
   scale_linewidth(range = c(.01, .8), guide = "none") +
   coord_sf(crs = 31287, xlim = c(AUT_FRAME$XMIN, AUT_FRAME$XMAX), ylim = c(AUT_FRAME$YMIN, AUT_FRAME$YMAX), expand = FALSE) +
   THEME_MAP
 
 P_NET <- ggplot() +
-  geom_sf(data = IMP_HATCH, colour = "grey60", linewidth = .15) +
-  geom_sf(data = IMPOUNDMENTS, fill = NA, colour = "grey60", linewidth = .25) +
+  geom_sf(data = IMPOUNDMENTS, fill = alpha("grey40", .2), colour = NA) +
   with_shadow(
     geom_sf(data = NETWORK, aes(colour = WB_TYPE), linewidth = .25, lineend = "round"),
     x_offset = -60,
@@ -2883,6 +2946,13 @@ P_NET <- ggplot() +
     sigma    = 12) +
   geom_segment(data = END_MARKS, aes(x = X, y = Y, xend = XEND, yend = YEND), linewidth = 1, colour = "grey40", lineend = "round") +
   geom_sf(data = BARRIERS_2022, shape = 17, size = 1.5, colour = "grey30") +
+  geom_text(data = DAM_LABELS, aes(x = X + DX, y = Y + DY, label = NUM), size = TEXT_PT / .pt, fontface = "bold", colour = "grey30") +
+  geom_segment(data = filter(PLACES, FACE == "plain"), aes(x = X, y = Y, xend = X_LAB, yend = Y_LAB), colour = "grey40", linewidth = .2) +
+  geom_point(data = filter(PLACES, FACE == "plain"), aes(x = X, y = Y), size = .5, colour = "grey30") +
+  geom_point(data = filter(PLACES, FACE == "bold"), aes(x = X, y = Y), shape = 21, size = 1.2, stroke = .4, fill = "white", colour = "grey30") +
+  geom_text(data = PLACES, aes(x = X_LAB, y = Y_LAB + if_else(HJUST == .5, -700, 0), label = LABEL, hjust = HJUST, fontface = FACE), size = TEXT_PT / .pt, colour = "grey40") +
+  annotate("segment", x = 44800, xend = 47600, y = 322800, yend = 322800, colour = "grey40", linewidth = .2, arrow = arrow(length = unit(.8, "mm"), type = "closed")) +
+  annotate("text", x = 44500, y = 322800, label = "Bratislava", hjust = 1, size = TEXT_PT / .pt, fontface = "bold", colour = "grey40") +
   geom_text(data = YEAR_LABELS, aes(x = X, y = Y, label = YEAR), size = 3, fontface = "bold", colour = "grey40") +
   scale_colour_manual(values = setNames(HABITAT_KEY$COLOUR, HABITAT_KEY$WB_TYPE), guide = "none") +
   coord_sf(crs = st_crs(NETWORK), xlim = c(NET_FRAME$XMIN, NET_FRAME$XMAX), ylim = c(NET_FRAME$YMIN, NET_FRAME$YMAX), expand = FALSE) +
@@ -2911,11 +2981,11 @@ ELEV_TICKS <- tibble(VALUE = ELEV_BREAKS) %>%
   mutate(X = ELEV_X0 + 25 * (VALUE - ELEV_LIMITS[1]) / diff(ELEV_LIMITS)) %>%
   filter(X > ELEV_X0, X < ELEV_X0 + 25)
 
-LEG_X     <- x_mm(NET_FRAME, -5.9e4)
-LEG_Y     <- y_mm(NET_FRAME, 3.52e5 - Y_OFFSET)
+LEG_X     <- x_mm(NET_FRAME, -6.05e4)
+LEG_Y     <- y_mm(NET_FRAME, 3.48e5 - Y_OFFSET)
 LEG_ROWS  <- ceiling(nrow(HABITAT_KEY) / 2)
 LEG_COL_W <- KEY + KEY_GAP + text_w(HABITAT_KEY$LABEL[1:LEG_ROWS], TEXT_PT) + GAP
-LEG_DAM_X <- LEG_X + LEG_COL_W + KEY + KEY_GAP + text_w(c(HABITAT_KEY$LABEL[-(1:LEG_ROWS)], "Main channel impounded"), TEXT_PT) + GAP
+LEG_DAM_X <- LEG_X + LEG_COL_W + KEY + KEY_GAP + text_w(HABITAT_KEY$LABEL[-(1:LEG_ROWS)], TEXT_PT) + GAP
 
 HABITAT_LEGEND <- HABITAT_KEY %>%
   mutate(
@@ -2923,19 +2993,16 @@ HABITAT_LEGEND <- HABITAT_KEY %>%
     Y = LEG_Y - 4.6 - ((row_number() - 1) %% LEG_ROWS) * (KEY + 1)
   )
 
-DAM_Y <- min(HABITAT_LEGEND$Y)
-IMP_X <- LEG_X + LEG_COL_W
-IMP_Y <- min(HABITAT_LEGEND$Y[HABITAT_LEGEND$X == IMP_X]) - KEY - 1
-
-IMP_KEY <- st_sfc(st_polygon(list(rbind(c(0, 0), c(KEY, 0), c(KEY, KEY), c(0, KEY), c(0, 0)))) + c(IMP_X, IMP_Y - KEY)) %>%
-  hatch(STEP = 1) %>%
-  st_coordinates() %>%
-  as_tibble() %>%
-  transmute(X, Y, L = L1)
+DAM_LEGEND <- DAM_LABELS %>%
+  mutate(
+    X = LEG_DAM_X,
+    Y = LEG_Y - 4.6 - (NUM - 1) * (KEY + 1) - KEY / 2
+  )
 
 LEGEND_TITLES <- tribble(
   ~X,        ~Y,          ~LABEL,
-  LEG_X,     LEG_Y,       "Habitat"
+  LEG_X,     LEG_Y,       "Habitat",
+  LEG_DAM_X, LEG_Y,       "Dams"
 )
 
 SCALE_BARS <- tribble(
@@ -2960,16 +3027,19 @@ SCALE_SEGMENTS <- SCALE_BARS %>%
     FILL = if_else(I %% 2 == 1, "grey40", "white")
   )
 
-NORTH_GROB <- gTree(children = ggspatial::north_arrow_orienteering(line_width = .5, line_col = "black", fill = c("grey40", "white"), text_col = "grey40", text_face = "bold", text_size = 6))
+NORTH_GROB <- gTree(children = ggspatial::north_arrow_orienteering(line_width = .5, line_col = "grey40", fill = c("grey40", "white"), text_col = "grey40", text_face = "bold", text_size = 6))
 
 #### PLOTTING ####
 
 P_SITE <- ggplot() +
   geom_segment(data = SEPARATORS, aes(x = BOX_L, xend = BOX_R, y = Y, yend = Y), colour = "grey40", linewidth = 1.2) +
+  geom_rect(data = filter(BOXES, FACET_STYLE), aes(xmin = BOX_L, xmax = BOX_R, ymin = YMIN, ymax = YMAX - STRIP_H), fill = "grey92") +
   place(P_NET, NET_FRAME) +
   place(P_AUT, AUT_FRAME) +
   place(P_EUR, EUR_FRAME) +
-  geom_text(data = BOXES, aes(x = BOX_L + 2, y = YMAX - 2, label = LABEL), hjust = 0, vjust = 1, size = TITLE_PT / .pt, fontface = "bold", colour = "grey40") +
+  geom_rect(data = filter(BOXES, FACET_STYLE), aes(xmin = BOX_L, xmax = BOX_R, ymin = YMAX - STRIP_H, ymax = YMAX), fill = "grey85") +
+  geom_text(data = filter(BOXES, FACET_STYLE), aes(x = FIG_W / 2, y = YMAX - STRIP_H / 2, label = TITLE), size = TITLE_PT / .pt, fontface = "bold", colour = "grey40") +
+  geom_text(data = BOXES, aes(x = BOX_L + 2, y = YMAX - if (FACET_STYLE) STRIP_H / 2 else 2, label = LABEL), hjust = 0, vjust = if (FACET_STYLE) .5 else 1, size = TITLE_PT / .pt, fontface = "bold", colour = "grey40") +
   annotate("segment", x = TL_X0, xend = TL_X1, y = Y_TL, yend = Y_TL, colour = "grey40", linewidth = .5) +
   geom_point(data = TIMELINE_POS, aes(x = X, y = Y_TL, fill = FILL), shape = 21, size = 1.8, stroke = .5, colour = "grey40") +
   geom_text(data = TIMELINE_POS, aes(x = X, y = Y_TL + SIDE * 2.6, label = YEAR, hjust = HJUST, vjust = VJUST), size = 3, fontface = "bold", colour = "grey40") +
@@ -2982,12 +3052,10 @@ P_SITE <- ggplot() +
   geom_text(data = LEGEND_TITLES, aes(x = X, y = Y, label = LABEL), hjust = 0, vjust = 1, size = TITLE_PT / .pt, fontface = "bold", colour = "grey40") +
   geom_rect(data = HABITAT_LEGEND, aes(xmin = X, xmax = X + KEY, ymin = Y - KEY, ymax = Y, fill = COLOUR)) +
   geom_text(data = HABITAT_LEGEND, aes(x = X + KEY + KEY_GAP, y = Y - KEY / 2, label = LABEL), hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
-  geom_path(data = IMP_KEY, aes(x = X, y = Y, group = L), colour = "grey60", linewidth = .15) +
-  annotate("rect", xmin = IMP_X, xmax = IMP_X + KEY, ymin = IMP_Y - KEY, ymax = IMP_Y, fill = NA, colour = "grey60", linewidth = .25) +
-  annotate("text", x = IMP_X + KEY + KEY_GAP, y = IMP_Y - KEY / 2, label = "Main channel impounded", hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
-  annotate("point", x = LEG_DAM_X + KEY / 2, y = DAM_Y - KEY / 2, shape = 17, size = 1.5, colour = "grey30") +
-  annotate("text", x = LEG_DAM_X + KEY + KEY_GAP, y = DAM_Y - KEY / 2, label = "Dam", hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
-  geom_rect(data = SCALE_SEGMENTS, aes(xmin = XMIN, xmax = XMAX, ymin = Y - .5, ymax = Y + .5, fill = FILL), colour = "black", linewidth = .2) +
+  annotate("point", x = LEG_DAM_X + text_w("Dams", TITLE_PT, "bold") + 2.5, y = LEG_Y - 1.4, shape = 17, size = 1.5, colour = "grey30") +
+  geom_text(data = DAM_LEGEND, aes(x = X + 1, y = Y, label = NUM), hjust = .5, size = TEXT_PT / .pt, fontface = "bold", colour = "grey30") +
+  geom_text(data = DAM_LEGEND, aes(x = X + 4, y = Y, label = LABEL), hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
+  geom_rect(data = SCALE_SEGMENTS, aes(xmin = XMIN, xmax = XMAX, ymin = Y - .5, ymax = Y + .5, fill = FILL), colour = "grey40", linewidth = .2) +
   geom_text(data = SCALE_BARS, aes(x = X0 - 2.5, y = Y, label = LABEL), hjust = 1, size = 3, fontface = "bold", colour = "grey40") +
   pmap(NORTH_ARROWS, function(X, Y) annotation_custom(NORTH_GROB, xmin = X - 2.5, xmax = X + 2.5, ymin = Y - 2.5, ymax = Y + 2.5)) +
   scale_fill_identity() +
@@ -4075,24 +4143,24 @@ P_GROUP <- ggplot(SC_TAXA_PLOT_GROUP, aes(x = as.factor(SC), y = N_TAXA, fill = 
     axis.ticks.y          = element_line(color = "grey40"),
     axis.ticks.x          = element_blank(),
 
-    legend.text           = element_text(size = 6, color = "grey40", margin = margin(0,5,0,3)),
-    legend.title          = element_text(size = 8, color = "grey40", face = "bold", margin = margin(0,15,1,0)),
-    legend.ticks          =  element_line(color = "grey40"),
+    legend.text           = element_text(size = 6, color = "grey40"),
+    legend.title          = element_text(size = 8, color = "grey40", face = "bold"),
     legend.box.background = element_rect(fill = "transparent", color = NA),
     legend.background     = element_rect(fill = "transparent", color = NA),
     legend.key.height     = unit(4, "mm"),
     legend.key.width      = unit(4, "mm"),
-    legend.margin         = margin(0,0,0,0),
+    legend.margin         = margin(t = 0, r = 0, b = 0, l = -5),
     legend.key            = element_rect(fill = "transparent", color = NA),
-    legend.position       = "bottom",
-    legend.direction      = "horizontal",
+    legend.position       = "right",
+    legend.direction      = "vertical",
 
     panel.grid.major.y    = element_line(linewidth = .4),
     panel.grid.major.x    = element_blank(),
     panel.grid.minor      = element_line(linewidth = .2),
     plot.background       = element_rect(fill = "transparent", color = NA),
     plot.margin           = margin(0,0,0,0),
-    aspect.ratio          = 1
+    panel.widths          = unit(PANEL_MM, "mm"),
+    panel.heights         = unit(PANEL_MM, "mm")
 
   ) +
   labs(title = "A")
@@ -4101,42 +4169,40 @@ P_DISP <- ggplot(SC_TAXA_PLOT_DISP, aes(x = as.factor(SC), y = N_TAXA, fill = DI
   geom_bar(stat = "identity", alpha = .75) +
   scale_fill_manual(values = c("#468892", "#74F3D3", "#751C6D",  "#FF3BD5"), name = "Dispersal") +
   scale_x_discrete(name = "SC") +
-  scale_y_continuous() +
+  scale_y_continuous(name = "Number of taxa") +
   theme(
 
     plot.title            = element_text(size = 8, color = "grey40", face = "bold"),
 
     axis.text             = element_text(size = 6, color = "grey40"),
-    axis.title.x          = element_text(size = 8, color = "grey40", face = "bold"),
-    axis.title.y          = element_blank(),
+    axis.title            = element_text(size = 8, color = "grey40", face = "bold"),
     axis.ticks.y          = element_line(color = "grey40"),
     axis.ticks.x          = element_blank(),
 
-    legend.text           = element_text(size = 6, color = "grey40", margin = margin(0,5,0,3)),
-    legend.title          = element_text(size = 8, color = "grey40", face = "bold", margin = margin(0,15,1,0)),
-    legend.ticks          =  element_line(color = "grey40"),
+    legend.text           = element_text(size = 6, color = "grey40"),
+    legend.title          = element_text(size = 8, color = "grey40", face = "bold"),
     legend.box.background = element_rect(fill = "transparent", color = NA),
     legend.background     = element_rect(fill = "transparent", color = NA),
     legend.key.height     = unit(4, "mm"),
     legend.key.width      = unit(4, "mm"),
-    legend.margin         = margin(0,0,0,0),
+    legend.margin         = margin(t = 0, r = 0, b = 0, l = -5),
     legend.key            = element_rect(fill = "transparent", color = NA),
-    legend.position       = "bottom",
-    legend.direction      = "horizontal",
+    legend.position       = "right",
+    legend.direction      = "vertical",
 
     panel.grid.major.y    = element_line(linewidth = .4),
     panel.grid.major.x    = element_blank(),
     panel.grid.minor      = element_line(linewidth = .2),
     plot.background       = element_rect(fill = "transparent", color = NA),
-    plot.margin           = margin(0,0,0,5),
-    aspect.ratio          = 1
+    plot.margin           = margin(0,0,0,0),
+    panel.widths          = unit(PANEL_MM, "mm"),
+    panel.heights         = unit(PANEL_MM, "mm")
 
   ) +
   labs(title = "B")
 
-P_TAXA_SC <- ggpubr::ggarrange(P_GROUP, P_DISP) +
-  theme(plot.margin = margin(0,-5,0,0))
-ggsave(P_TAXA_SC, filename= "./PLOTS/TAXA_SC.png", width= 174, height= 95, unit= "mm", dpi = 600)
+P_TAXA_SC <- pair_plot(P_GROUP, P_DISP)
+ggsave(P_TAXA_SC$PLOT, filename= "./PLOTS/TAXA_SC.png", width= 174, height= P_TAXA_SC$HEIGHT, unit= "mm", dpi = 600)
 
 ### K CLUSTER ####
 
@@ -4150,29 +4216,158 @@ K_WSS <- rbind(
   ungroup() %>%
   mutate(VARIABLE = factor(VARIABLE, levels = c("SC", "CC")))
 
-P_K <- ggplot(K_WSS) +
-  geom_point(aes(x = K, y = WSS), color = "grey40", alpha =.8) +
-  geom_vline(data = tibble(K = c(5,4), VARIABLE = factor(c("SC", "CC"), levels = c("SC", "CC"))), aes(xintercept = K), color = "grey40", linetype = "dotted") +
-  scale_x_continuous(breaks = seq(1,10,1)) +
-  labs(x = "Number of clusters", y = expression(paste(bold("WSS "), "[%]"))) +
-  facet_wrap(~VARIABLE) +
+k_plot <- function(VAR, K_FINAL) {
+  ggplot(filter(K_WSS, VARIABLE == VAR)) +
+    geom_point(aes(x = K, y = WSS), color = "grey40", alpha =.8) +
+    geom_vline(xintercept = K_FINAL, color = "grey40", linetype = "dotted") +
+    scale_x_continuous(breaks = seq(1,10,1)) +
+    labs(x = "Number of clusters", y = expression(paste(bold("WSS "), "[%]"))) +
+    facet_wrap(~VARIABLE) +
 
-  theme(
-    axis.text            = element_text(size = 6, color = "grey40"),
-    axis.title.y         = element_text(size = 8, color = "grey40", , face = "bold", margin = margin(r = 10)),
-    axis.title.x         = element_text(size = 8, color = "grey40", , face = "bold", margin = margin(t = 10)),
-    strip.text           = element_markdown(face = "bold", size = 8, color = "grey40"),
-    axis.ticks           = element_line(color = "grey40"),
-    plot.background      = element_rect(fill = "white", color = "white"),
-    plot.margin          = margin(0, 0, 0, 0),
-    panel.grid.major.y   = element_line(linewidth = .4),
-    panel.grid.minor.y   = element_line(linewidth = .2),
-    panel.grid.major.x   = element_line(linewidth = .4),
-    panel.grid.minor.x   = element_blank(),
-    aspect.ratio = 1
+    theme(
+      axis.text            = element_text(size = 6, color = "grey40"),
+      axis.title.y         = element_text(size = 8, color = "grey40", , face = "bold", margin = margin(r = 6)),
+      axis.title.x         = element_text(size = 8, color = "grey40", , face = "bold", margin = margin(t = 6)),
+      strip.text           = element_markdown(face = "bold", size = 8, color = "grey40"),
+      axis.ticks           = element_line(color = "grey40"),
+      plot.background      = element_rect(fill = "transparent", color = NA),
+      plot.margin          = margin(0, 0, 0, 0),
+      panel.grid.major.y   = element_line(linewidth = .4),
+      panel.grid.minor.y   = element_line(linewidth = .2),
+      panel.grid.major.x   = element_line(linewidth = .4),
+      panel.grid.minor.x   = element_blank(),
+      panel.widths         = unit(PANEL_MM, "mm"),
+      panel.heights        = unit(PANEL_MM, "mm")
+    )
+}
+
+P_K <- pair_plot(k_plot("SC", 5), k_plot("CC", 4))
+
+ggsave(P_K$PLOT, filename= "./PLOTS/K.png", width= 174, height= P_K$HEIGHT, unit= "mm", dpi = 600)
+
+### NETWORK CONCEPT ####
+
+NC_W       <- 10.4
+NC_H       <- 10.4
+NC_S       <- PANEL_MM / NC_W
+NC_MAIN_HW <- 2.8
+NC_MAIN_Y  <- NC_MAIN_HW + .8
+NC_ARM_HW  <- .95
+NC_ARM_U   <- c(.24, .24, .42, .64)
+NC_ARM_V   <- c(1, .72, .5, NC_MAIN_Y / NC_H)
+NC_NODE_R  <- .8
+
+NC_ARM <- tibble(T = seq(0, 1, length.out = 200)) %>%
+  mutate(
+    X   = ((1 - T)^3 * NC_ARM_U[1] + 3 * (1 - T)^2 * T * NC_ARM_U[2] + 3 * (1 - T) * T^2 * NC_ARM_U[3] + T^3 * NC_ARM_U[4]) * NC_W,
+    Y   = ((1 - T)^3 * NC_ARM_V[1] + 3 * (1 - T)^2 * T * NC_ARM_V[2] + 3 * (1 - T) * T^2 * NC_ARM_V[3] + T^3 * NC_ARM_V[4]) * NC_H,
+    DX  = (3 * (1 - T)^2 * (NC_ARM_U[2] - NC_ARM_U[1]) + 6 * (1 - T) * T * (NC_ARM_U[3] - NC_ARM_U[2]) + 3 * T^2 * (NC_ARM_U[4] - NC_ARM_U[3])) * NC_W,
+    DY  = (3 * (1 - T)^2 * (NC_ARM_V[2] - NC_ARM_V[1]) + 6 * (1 - T) * T * (NC_ARM_V[3] - NC_ARM_V[2]) + 3 * T^2 * (NC_ARM_V[4] - NC_ARM_V[3])) * NC_H,
+    LEN = sqrt(DX^2 + DY^2),
+    NX  = -DY / LEN,
+    NY  = DX / LEN
   )
 
-ggsave(P_K, filename= "./PLOTS/K.png", width= 174, height= 95, unit= "mm", dpi = 600)
+NC_ARM_REACH <- NC_ARM %>%
+  filter(Y >= NC_MAIN_Y + NC_MAIN_HW) %>%
+  mutate(S = cumsum(c(0, sqrt(diff(X)^2 + diff(Y)^2))))
+
+NC_CONFLUENCE <- NC_ARM_REACH %>%
+  slice_tail(n = 1)
+
+NC_JUNCTION <- tibble(X = NC_CONFLUENCE$X, Y = NC_MAIN_Y)
+
+NC_CHANNEL <- bind_rows(
+  tibble(GROUP = "MAIN", X = c(0, NC_W, NC_W, 0), Y = NC_MAIN_Y + c(-1, -1, 1, 1) * NC_MAIN_HW),
+  bind_rows(
+    NC_ARM %>% transmute(X = X + NX * NC_ARM_HW, Y = Y + NY * NC_ARM_HW),
+    NC_ARM %>% arrange(desc(T)) %>% transmute(X = X - NX * NC_ARM_HW, Y = Y - NY * NC_ARM_HW)
+  ) %>%
+    mutate(GROUP = "ARM")
+)
+
+NC_REACHES <- bind_rows(
+  NC_ARM_REACH %>% transmute(GROUP = "TEAL", X, Y, COLOUR = "#468892", LTY = "solid"),
+  bind_rows(NC_CONFLUENCE, NC_JUNCTION) %>% transmute(GROUP = "CONNECTOR", X, Y, COLOUR = "#FF3BD5", LTY = "11"),
+  tibble(GROUP = "MINT", X = c(0, NC_JUNCTION$X), Y = NC_MAIN_Y, COLOUR = "#74F3D3", LTY = "solid"),
+  tibble(GROUP = "PEACH", X = c(NC_JUNCTION$X, NC_W), Y = NC_MAIN_Y, COLOUR = "#FDC067", LTY = "solid")
+)
+
+NC_ENDS <- bind_rows(NC_CONFLUENCE, NC_JUNCTION) %>%
+  dplyr::select(X, Y)
+
+NC_NODES <- bind_rows(
+  NC_ARM_REACH %>%
+    slice_min(abs(S - max(S) / 2), n = 1) %>%
+    transmute(NODE = "TEAL", X, Y, R = NC_NODE_R, COLOUR = "#468892"),
+  tribble(
+    ~NODE,           ~X,                          ~Y,                              ~R,        ~COLOUR,
+    "UPSTREAM_ARM",  NC_ARM_U[1] * NC_W,          NC_H,                            0,         NA,
+    "UPSTREAM_MAIN", 0,                           NC_MAIN_Y,                       0,         NA,
+    "DOWNSTREAM",    NC_W,                        NC_MAIN_Y,                       0,         NA,
+    "MINT",          NC_JUNCTION$X / 2,           NC_MAIN_Y,                       NC_NODE_R, "#74F3D3",
+    "CONNECTOR",     NC_JUNCTION$X,               (NC_CONFLUENCE$Y + NC_MAIN_Y) / 2, NC_NODE_R, "#FF3BD5",
+    "PEACH",         (NC_JUNCTION$X + NC_W) / 2,  NC_MAIN_Y,                       NC_NODE_R, "#FDC067"
+  )
+)
+
+NC_LINKS <- tribble(
+  ~FROM,           ~TO,
+  "UPSTREAM_ARM",  "TEAL",
+  "UPSTREAM_MAIN", "MINT",
+  "TEAL",          "CONNECTOR",
+  "CONNECTOR",     "PEACH",
+  "MINT",          "PEACH",
+  "PEACH",         "DOWNSTREAM"
+) %>%
+  left_join(dplyr::select(NC_NODES, FROM = NODE, X, Y, R_FROM = R), by = "FROM") %>%
+  left_join(dplyr::select(NC_NODES, TO = NODE, XEND = X, YEND = Y, R_TO = R), by = "TO") %>%
+  mutate(
+    THETA = atan2(YEND - Y, XEND - X),
+    GAP   = if_else(R_TO > 0, R_TO + .2, 0),
+    X     = X + R_FROM * cos(THETA),
+    Y     = Y + R_FROM * sin(THETA),
+    XEND  = XEND - GAP * cos(THETA),
+    YEND  = YEND - GAP * sin(THETA)
+  )
+
+NC_THEME <- theme(
+  plot.title       = element_text(size = 8, color = "grey40", face = "bold"),
+  strip.text       = element_text(size = 8, color = "grey40", face = "bold"),
+  axis.text        = element_blank(),
+  axis.ticks       = element_blank(),
+  axis.title       = element_blank(),
+  panel.grid       = element_blank(),
+  plot.background  = element_rect(fill = "transparent", color = NA),
+  plot.margin      = margin(0, 0, 0, 0),
+  panel.widths     = unit(PANEL_MM, "mm"),
+  panel.heights    = unit(PANEL_MM, "mm")
+)
+
+P_NC_REACHES <- ggplot(tibble(STRIP = "Reaches")) +
+  geom_polygon(data = NC_CHANNEL, aes(x = X, y = Y, group = GROUP), fill = "grey80") +
+  geom_path(data = NC_REACHES, aes(x = X, y = Y, group = GROUP, colour = COLOUR, linetype = LTY), linewidth = .45 * NC_S, lineend = "butt") +
+  geom_point(data = NC_ENDS, aes(x = X, y = Y), colour = "#4D4D4D", size = .55 * NC_S, stroke = 0) +
+  scale_colour_identity() +
+  scale_linetype_identity() +
+  coord_cartesian(xlim = c(0, NC_W), ylim = c(0, NC_H), expand = FALSE) +
+  facet_wrap(~STRIP) +
+  NC_THEME +
+  labs(title = "A")
+
+P_NC_NETWORK <- ggplot(tibble(STRIP = "Network")) +
+  geom_polygon(data = NC_CHANNEL, aes(x = X, y = Y, group = GROUP), fill = "grey80") +
+  geom_segment(data = NC_LINKS, aes(x = X, y = Y, xend = XEND, yend = YEND), colour = "#4D4D4D", linewidth = .15 * NC_S, arrow = arrow(length = unit(.4 * NC_S, "mm"), angle = 25, type = "closed")) +
+  geom_point(data = filter(NC_NODES, R > 0), aes(x = X, y = Y, colour = COLOUR), size = 1.6 * NC_S) +
+  scale_colour_identity() +
+  coord_cartesian(xlim = c(0, NC_W), ylim = c(0, NC_H), expand = FALSE) +
+  facet_wrap(~STRIP) +
+  NC_THEME +
+  labs(title = "B")
+
+P_NC <- pair_plot(P_NC_REACHES, P_NC_NETWORK)
+
+ggsave(P_NC$PLOT, filename= "./PLOTS/NETWORK.png", width= 174, height= P_NC$HEIGHT, unit= "mm", dpi = 600)
 
 ### VALIDATION ####
 
@@ -4964,4 +5159,7 @@ FIG_WORKFLOW <- ggplot() +
 
 ggsave("./PLOTS/CONCEPT.png", FIG_WORKFLOW, width = FIG_W, height = FIG_H, units = "mm", dpi = 300)
 
+# ~~~~~~~~~~~~~~~~~~~~ ####       
+# ~~~~~~ ><{{{°> ~~~~~ ####
+# ~~~~~~~~~~~~~~~~~~~~ ####
 # END ####
