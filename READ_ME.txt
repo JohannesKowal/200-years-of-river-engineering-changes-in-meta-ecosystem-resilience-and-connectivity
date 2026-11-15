@@ -30,6 +30,7 @@ SAMPLES.shp: presence/absence data set for taxa (where available) used for the d
   GENUS		    taxonomic genus
   SPECIES	    taxonomic species
   PRES		    indicates whether a taxon was present (1) or absent (0) at a site during the time of sampling
+  YEAR		    year of sampling
 
 ~~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~~ ><{{{°> ~~~~~ ><{{{°> ~~~~~
 
