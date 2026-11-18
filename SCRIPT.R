@@ -9,7 +9,7 @@ BIN <- normalizePath(file.path(Sys.getenv("APPDATA"), "TinyTeX", "bin", "windows
 Sys.setenv(PATH = paste(BIN, Sys.getenv("PATH"), sep = ";"))
 
 packages <- c(
-  "readxl", "data.table", "tidyverse", "igraph", "sf", "terra", "raster",
+  "this.path", "readxl", "data.table", "tidyverse", "igraph", "sf", "terra", "raster",
   "future.apply", "vegan", "cluster", "factoextra", "riverconn",
   "ggnewscale", "ggtext", "paletteer", "plotly", "ggspatial", "ggfx", "ggridges", "patchwork", "elevatr",
   "grid", "png", "ragg", "latex2exp", "xdvir"
@@ -280,7 +280,7 @@ pair_plot <- function(PLOT_A, PLOT_B, GAP = 10, FIG_W = 174, PAD = 1) {
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # PREP DATA ####
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(this.path::this.dir())
 
 ## SC (WEIGHTS) ####
 
@@ -3082,6 +3082,89 @@ Y_OFFSETS                       <- - Y_OFFSET * (length(YEAR_LEVELS) - 1)
 SHIFTED_GEOM                    <- Map(function(geom, y_shift) {geom + c(0, y_shift)}, st_geometry(VIENNA_POLY_OFFSET), Y_OFFSETS)
 st_geometry(VIENNA_POLY_OFFSET) <- st_sfc(SHIFTED_GEOM, crs = st_crs(VIENNA_POLY_OFFSET))
 
+DAMS <- BARRIERS %>%
+  st_transform(st_crs(RCI_MASTER)) %>%
+  mutate(
+    X = st_coordinates(.)[, 1],
+    Y = st_coordinates(.)[, 2]
+  ) %>%
+  st_drop_geometry() %>%
+  arrange(X) %>%
+  mutate(
+    NUM   = row_number(),
+    LABEL = c("Altenwörth", "Greifenstein", "Nußdorf", "Freudenau"),
+    DX    = c(0, 0, -1900, -1500),
+    DY    = c(-3300, -3700, 0, -1900)
+  ) %>%
+  dplyr::select(NUM, LABEL, X, Y, DX, DY)
+
+DAM_YEARS <- tribble(
+  ~YEAR, ~NUM,
+  1910,  3,
+  1965,  3,
+  1996,  1,
+  1996,  2,
+  1996,  3,
+  1996,  4,
+  2022,  1,
+  2022,  2,
+  2022,  3,
+  2022,  4
+)
+
+DAMS_CC <- DAM_YEARS %>%
+  left_join(DAMS, by = "NUM") %>%
+  mutate(Y = Y - Y_OFFSET * (match(YEAR, YEAR_LEVELS) - 1))
+
+# Impounded sections (figure 1) for 1996 and 2022 (IMPOUNDMENTS is already shifted by one row)
+IMPOUNDMENTS_CC <- rbind(
+  shift_y(IMPOUNDMENTS, -4 * Y_OFFSET),
+  shift_y(IMPOUNDMENTS, -5 * Y_OFFSET)
+) %>%
+  st_transform(st_crs(RCI_MASTER))
+
+CC_KEY <- tibble(
+  CC     = factor(1:4, levels = 1:4),
+  COLOUR = c("#468892", "#74F3D3", "#751C6D", "#FF3BD5"),
+  LABEL  = paste0("CC", 1:4)
+)
+
+CC_XLIM <- c(-7.4e4, st_bbox(RCI_MASTER_OFFSET)[["xmax"]])
+MM      <- diff(CC_XLIM) * (1 + .0025 + .018) / 178
+
+CC_LEG_X <- -6.29e4
+CC_LEG_Y <- 2.40e5
+CC_DAM_X <- CC_LEG_X + 36 * MM
+
+CC_LEGEND <- CC_KEY %>%
+  mutate(
+    X = CC_LEG_X,
+    Y = CC_LEG_Y - (4.6 + (row_number() - 1) * (KEY + 1)) * MM
+  )
+
+CC_DAM_LEGEND <- DAMS %>%
+  mutate(
+    X = CC_DAM_X,
+    Y = CC_LEG_Y - (4.6 + (NUM - 1) * (KEY + 1) + KEY / 2) * MM
+  )
+
+CC_LEGEND_TITLES <- tribble(
+  ~X,        ~Y,       ~LABEL,
+  CC_LEG_X,  CC_LEG_Y, "Connectivity cluster",
+  CC_DAM_X,  CC_LEG_Y, "Dams"
+)
+
+CC_SCALE_KM <- 15
+CC_SCALE_X0 <- 2.8e4 - CC_SCALE_KM * 500
+CC_SCALE_Y  <- 3.51e5
+
+CC_SCALE_SEGMENTS <- tibble(I = 1:3) %>%
+  mutate(
+    XMIN = CC_SCALE_X0 + (I - 1) * 5000,
+    XMAX = XMIN + 5000,
+    FILL = if_else(I %% 2 == 1, "grey40", "white")
+  )
+
 ADDITIONAL_DATA <- RCI_MASTER_OFFSET %>%
 
   filter(WB_TYPE != "CO" & DISP == "MDM" & SC == 1) %>%
@@ -3152,6 +3235,8 @@ P_CC_1 <- ggplot() +
     sigma    = 12
   ) +
 
+  geom_sf(data = IMPOUNDMENTS_CC, fill = alpha("grey40", .2), colour = NA) +
+
   with_shadow(
     geom_sf(data = RCI_MASTER_OFFSET %>%
               filter(WB_TYPE != "CO" & DISP == "MDM" & SC == 1),
@@ -3162,11 +3247,21 @@ P_CC_1 <- ggplot() +
     sigma    = 12
   ) +
 
-  geom_point(
-    data = tibble(CC = factor(seq(1,4,1), levels = c(1,2,3,4))),
-    aes(x = 1e4, y = 3e5, fill = CC),
-    shape = 22, size = 5, color = NA, show.legend = TRUE
-  ) +
+  geom_point(data = DAMS_CC, aes(x = X, y = Y), shape = 17, size = 1.5, colour = "grey30") +
+  geom_text(data = DAMS_CC, aes(x = X + DX, y = Y + DY, label = NUM), size = TEXT_PT / .pt, fontface = "bold", colour = "grey30") +
+
+  geom_text(data = CC_LEGEND_TITLES, aes(x = X, y = Y, label = LABEL), hjust = 0, vjust = 1, size = TITLE_PT / .pt, fontface = "bold", colour = "grey40") +
+  geom_rect(data = CC_LEGEND, aes(xmin = X, xmax = X + KEY * MM, ymin = Y - KEY * MM, ymax = Y, fill = COLOUR)) +
+  geom_text(data = CC_LEGEND, aes(x = X + (KEY + KEY_GAP) * MM, y = Y - KEY / 2 * MM, label = LABEL), hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
+  annotate("point", x = CC_DAM_X + 10 * MM, y = CC_LEG_Y - 1.4 * MM, shape = 17, size = 1.5, colour = "grey30") +
+  geom_text(data = CC_DAM_LEGEND, aes(x = X + 1 * MM, y = Y, label = NUM), hjust = .5, size = TEXT_PT / .pt, fontface = "bold", colour = "grey30") +
+  geom_text(data = CC_DAM_LEGEND, aes(x = X + 4 * MM, y = Y, label = LABEL), hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
+
+  geom_rect(data = CC_SCALE_SEGMENTS, aes(xmin = XMIN, xmax = XMAX, ymin = CC_SCALE_Y - .5 * MM, ymax = CC_SCALE_Y + .5 * MM, fill = FILL), colour = "grey40", linewidth = .2) +
+  annotate("text", x = CC_SCALE_X0 - 2.5 * MM, y = CC_SCALE_Y, label = paste(CC_SCALE_KM, "km"), hjust = 1, size = 3, fontface = "bold", colour = "grey40") +
+  annotation_custom(NORTH_GROB,
+                    xmin = CC_SCALE_X0 + CC_SCALE_KM * 500 - 2.5 * MM, xmax = CC_SCALE_X0 + CC_SCALE_KM * 500 + 2.5 * MM,
+                    ymin = CC_SCALE_Y + 3 * MM, ymax = CC_SCALE_Y + 8 * MM) +
 
   geom_text(data = tibble(y    = rev(seq(2.15e5 + 17500, 2.15e5 + 7*17500, length.out = 7)),
                           x    = 2.8e4,
@@ -3208,33 +3303,10 @@ P_CC_1 <- ggplot() +
                color = "grey40",
                lineend = "round") +
 
-  ggspatial::annotation_north_arrow(location = "tr",
-                                    height   = unit(5, "mm"),
-                                    width    = unit(5, "mm"),
-                                    pad_x    = unit(27.5, "mm"),
-                                    pad_y    = unit(12, "mm"),
-                                    style    = north_arrow_orienteering(text_size = 6,
-                                                                        line_width    = .5,
-                                                                        text_col      = "grey40",
-                                                                        text_face     = "bold",
-                                                                        fill          = c("grey40", "white")))+
-
-  ggspatial::annotation_scale(location   = "bl",
-                              pad_x      = unit(27, "mm"),
-                              pad_y      = unit(8.5, "mm"),
-                              text_col   = "grey40", text_cex= 0,
-                              line_width = .5,
-                              height     = unit(1, "mm"),
-                              bar_cols   = c("grey40", "white"))+
-
   scale_x_continuous(expand = expansion(mult = c(.0025, .018))) +
   scale_y_continuous(expand = expansion(mult = c(.03, 0))) +
 
-  scale_fill_manual(
-    values = c("#468892", "#74F3D3","#751C6D",  "#FF3BD5"),
-    labels = c("CC1", "CC2", "CC3", "CC4"),
-    name = "Connectivity cluster"
-  ) +
+  scale_fill_identity() +
 
   scale_color_manual(
     values = c("#468892", "#74F3D3","#751C6D",  "#FF3BD5"),
@@ -3243,34 +3315,10 @@ P_CC_1 <- ggplot() +
 
   theme_void() +
 
-  guides(
-    fill  = guide_legend(
-      nrow           = 1,
-      byrow          = TRUE,
-      label.position = "bottom",
-      label.hjust    = 0.5,
-      title.position = "left"
-    )
-  ) +
-
   theme(
-    legend.position        = "inside",
-    legend.position.inside = c(0.25, 0.11),
-    legend.direction       = "horizontal",
-    legend.text            = element_text(size= 6, color = "grey40"),
-    legend.title           = element_text(margin = margin(0,10,12,0), face = "bold", size= 8, color = "grey40"),
-    legend.key.height      = unit(4,"mm"),
-    legend.key.width       = unit(4,"mm"),
-    panel.background       = element_rect(fill = "white", color = NA),
-    plot.margin            = margin(0,0,0,0)
-  ) +
-
-  annotate("text",
-           x = -60000, y = 228000,
-           label = "30 km",
-           size = 3,
-           fontface = "bold",
-           color = "grey40"
+    legend.position  = "none",
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.margin      = margin(0,0,0,0)
   )
 
 P_CC_2 <- ggplot(METADATA_CC, aes(x = "Total", y = CUM_LENGTH, fill = CC)) +
@@ -3299,6 +3347,143 @@ P_CC <- P_CC_1 +
   )
 
 ggsave(P_CC, filename= "./PLOTS/CC_SPATIAL.png", width= 178, height= 200, unit= "mm", dpi = 600)
+
+### HABITATS (SI) ####
+
+HAB_NODES <- list(NODES_1817, NODES_1857, NODES_1875, NODES_1910, NODES_1965, NODES_1996, NODES_2022)
+
+HABITATS_SI <- NULL
+
+for (I in seq_along(YEAR_LEVELS)) {
+  HABITATS_YEAR <- get_habitats(HAB_NODES[[I]], YEAR_LEVELS[I]) %>%
+    st_transform(st_crs(RCI_MASTER)) %>%
+    shift_y(-Y_OFFSET * (I - 1))
+  HABITATS_SI <- rbind(HABITATS_SI, HABITATS_YEAR)
+}
+
+METADATA_HAB <- HABITATS_SI %>%
+  mutate(LENGTH = as.numeric(st_length(.))) %>%
+  st_drop_geometry() %>%
+  group_by(YEAR, WB_TYPE) %>%
+  summarise(CUM_LENGTH = sum(LENGTH), .groups = "drop") %>%
+  mutate(WB_TYPE = factor(WB_TYPE, levels = rev(HABITAT_KEY$WB_TYPE)))
+
+HAB_ROWS <- 4
+
+HAB_LEGEND <- HABITAT_KEY %>%
+  mutate(
+    I = row_number(),
+    X = CC_LEG_X + ((I - 1) %/% HAB_ROWS) * 25 * MM,
+    Y = CC_LEG_Y - (4.6 + ((I - 1) %% HAB_ROWS) * (KEY + 1)) * MM
+  )
+
+HAB_DAM_X <- CC_LEG_X + 50 * MM
+
+HAB_DAM_LEGEND <- CC_DAM_LEGEND %>%
+  mutate(X = HAB_DAM_X)
+
+P_HAB_1 <- ggplot() +
+
+  geom_sf(data = IMPOUNDMENTS_CC, fill = alpha("grey40", .2), colour = NA) +
+
+  with_shadow(
+    geom_sf(data = HABITATS_SI, aes(color = WB_TYPE), lineend = "round", linewidth = .25, show.legend = FALSE),
+    x_offset = 60,
+    y_offset = 120,
+    colour   = "grey90",
+    sigma    = 12
+  ) +
+
+  geom_point(data = DAMS_CC, aes(x = X, y = Y), shape = 17, size = 1.5, colour = "grey30") +
+  geom_text(data = DAMS_CC, aes(x = X + DX, y = Y + DY, label = NUM), size = TEXT_PT / .pt, fontface = "bold", colour = "grey30") +
+
+  annotate("text", x = CC_LEG_X, y = CC_LEG_Y, label = "Habitat", hjust = 0, vjust = 1, size = TITLE_PT / .pt, fontface = "bold", colour = "grey40") +
+  geom_rect(data = HAB_LEGEND, aes(xmin = X, xmax = X + KEY * MM, ymin = Y - KEY * MM, ymax = Y, fill = COLOUR)) +
+  geom_text(data = HAB_LEGEND, aes(x = X + (KEY + KEY_GAP) * MM, y = Y - KEY / 2 * MM, label = LABEL), hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
+  annotate("text", x = HAB_DAM_X, y = CC_LEG_Y, label = "Dams", hjust = 0, vjust = 1, size = TITLE_PT / .pt, fontface = "bold", colour = "grey40") +
+  annotate("point", x = HAB_DAM_X + 10 * MM, y = CC_LEG_Y - 1.4 * MM, shape = 17, size = 1.5, colour = "grey30") +
+  geom_text(data = HAB_DAM_LEGEND, aes(x = X + 1 * MM, y = Y, label = NUM), hjust = .5, size = TEXT_PT / .pt, fontface = "bold", colour = "grey30") +
+  geom_text(data = HAB_DAM_LEGEND, aes(x = X + 4 * MM, y = Y, label = LABEL), hjust = 0, size = TEXT_PT / .pt, colour = "grey40") +
+
+  geom_rect(data = CC_SCALE_SEGMENTS, aes(xmin = XMIN, xmax = XMAX, ymin = CC_SCALE_Y - .5 * MM, ymax = CC_SCALE_Y + .5 * MM, fill = FILL), colour = "grey40", linewidth = .2) +
+  annotate("text", x = CC_SCALE_X0 - 2.5 * MM, y = CC_SCALE_Y, label = paste(CC_SCALE_KM, "km"), hjust = 1, size = 3, fontface = "bold", colour = "grey40") +
+  annotation_custom(NORTH_GROB,
+                    xmin = CC_SCALE_X0 + CC_SCALE_KM * 500 - 2.5 * MM, xmax = CC_SCALE_X0 + CC_SCALE_KM * 500 + 2.5 * MM,
+                    ymin = CC_SCALE_Y + 3 * MM, ymax = CC_SCALE_Y + 8 * MM) +
+
+  geom_text(data = tibble(y    = rev(seq(2.15e5 + 17500, 2.15e5 + 7*17500, length.out = 7)),
+                          x    = 2.8e4,
+                          text = as.character(YEAR_LEVELS)),
+            aes(x = x, y = y, label = text),
+            size = 3,
+            color = "grey40",
+            hjust = 0.5,
+            fontface = "bold") +
+
+  geom_text(data = METADATA_REACHES, aes(x = X, y = Y, label = LABEL), parse = TRUE, size = 2.5, color = "grey40", hjust = .5) +
+
+  geom_segment(data = tibble(x_start = -7.25e4,
+                             y_start = rev(seq(2.22e5 + 17500, 2.22e5 + 7*17500, length.out = 7)),
+                             x_end   = -7.4e4,
+                             y_end   = rev(seq(2.245e5 + 17500, 2.245e5 + 7*17500, length.out = 7))),
+               aes(x = x_start, y = y_start, xend = x_end, yend = y_end),
+               linewidth = 1,
+               color = "grey40",
+               lineend = "round") +
+
+  geom_segment(data = tibble(x_start = 4.8e4,
+                             y_start = rev(seq(2.129e5 + 17500, 2.129e5 + 7*17500, length.out = 7)),
+                             x_end   = 4.8e4,
+                             y_end   = rev(seq(2.159e5 + 17500, 2.159e5 + 7*17500, length.out = 7))),
+               aes(x = x_start, y = y_start, xend = x_end, yend = y_end),
+               linewidth = 1,
+               color = "grey40",
+               lineend = "round") +
+
+  scale_x_continuous(expand = expansion(mult = c(.0025, .018))) +
+  scale_y_continuous(expand = expansion(mult = c(.03, 0))) +
+
+  scale_fill_identity() +
+
+  scale_color_manual(
+    values = setNames(HABITAT_KEY$COLOUR, HABITAT_KEY$WB_TYPE),
+    guide  = "none"
+  ) +
+
+  theme_void() +
+
+  theme(
+    legend.position  = "none",
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.margin      = margin(0,0,0,0)
+  )
+
+P_HAB_2 <- ggplot(METADATA_HAB, aes(x = "Total", y = CUM_LENGTH, fill = WB_TYPE)) +
+  geom_col(width = .1) +
+  coord_flip() +
+  facet_wrap(~YEAR, ncol = 1) +
+  scale_fill_manual(values = setNames(HABITAT_KEY$COLOUR, HABITAT_KEY$WB_TYPE)) +
+  theme_void() +
+  theme(
+    legend.position       = "none",
+    strip.text            = element_blank(),
+    panel.background      = element_rect(fill = "transparent", color = NA),
+    plot.background       = element_rect(fill = "transparent", color = NA),
+    strip.background      = element_rect(fill = "transparent", color = NA),
+    legend.background     = element_rect(fill = "transparent", color = NA),
+    legend.box.background = element_rect(fill = "transparent", color = NA)
+  )
+
+P_HAB <- P_HAB_1 +
+  inset_element(
+    P_HAB_2,
+    left = 0.085,
+    bottom = 0.12,
+    right = 0.23,
+    top = 0.965
+  )
+
+ggsave(P_HAB, filename= "./PLOTS/HABITATS_SPATIAL.png", width= 178, height= 200, unit= "mm", dpi = 600)
 
 ## NON-SPATIAL ####
 ### CCI ####
@@ -4245,130 +4430,6 @@ P_K <- pair_plot(k_plot("SC", 5), k_plot("CC", 4))
 
 ggsave(P_K$PLOT, filename= "./PLOTS/K.png", width= 174, height= P_K$HEIGHT, unit= "mm", dpi = 600)
 
-### NETWORK CONCEPT ####
-
-NC_W       <- 10.4
-NC_H       <- 10.4
-NC_S       <- PANEL_MM / NC_W
-NC_MAIN_HW <- 2.8
-NC_MAIN_Y  <- NC_MAIN_HW + .8
-NC_ARM_HW  <- .95
-NC_ARM_U   <- c(.24, .24, .42, .64)
-NC_ARM_V   <- c(1, .72, .5, NC_MAIN_Y / NC_H)
-NC_NODE_R  <- .8
-
-NC_ARM <- tibble(T = seq(0, 1, length.out = 200)) %>%
-  mutate(
-    X   = ((1 - T)^3 * NC_ARM_U[1] + 3 * (1 - T)^2 * T * NC_ARM_U[2] + 3 * (1 - T) * T^2 * NC_ARM_U[3] + T^3 * NC_ARM_U[4]) * NC_W,
-    Y   = ((1 - T)^3 * NC_ARM_V[1] + 3 * (1 - T)^2 * T * NC_ARM_V[2] + 3 * (1 - T) * T^2 * NC_ARM_V[3] + T^3 * NC_ARM_V[4]) * NC_H,
-    DX  = (3 * (1 - T)^2 * (NC_ARM_U[2] - NC_ARM_U[1]) + 6 * (1 - T) * T * (NC_ARM_U[3] - NC_ARM_U[2]) + 3 * T^2 * (NC_ARM_U[4] - NC_ARM_U[3])) * NC_W,
-    DY  = (3 * (1 - T)^2 * (NC_ARM_V[2] - NC_ARM_V[1]) + 6 * (1 - T) * T * (NC_ARM_V[3] - NC_ARM_V[2]) + 3 * T^2 * (NC_ARM_V[4] - NC_ARM_V[3])) * NC_H,
-    LEN = sqrt(DX^2 + DY^2),
-    NX  = -DY / LEN,
-    NY  = DX / LEN
-  )
-
-NC_ARM_REACH <- NC_ARM %>%
-  filter(Y >= NC_MAIN_Y + NC_MAIN_HW) %>%
-  mutate(S = cumsum(c(0, sqrt(diff(X)^2 + diff(Y)^2))))
-
-NC_CONFLUENCE <- NC_ARM_REACH %>%
-  slice_tail(n = 1)
-
-NC_JUNCTION <- tibble(X = NC_CONFLUENCE$X, Y = NC_MAIN_Y)
-
-NC_CHANNEL <- bind_rows(
-  tibble(GROUP = "MAIN", X = c(0, NC_W, NC_W, 0), Y = NC_MAIN_Y + c(-1, -1, 1, 1) * NC_MAIN_HW),
-  bind_rows(
-    NC_ARM %>% transmute(X = X + NX * NC_ARM_HW, Y = Y + NY * NC_ARM_HW),
-    NC_ARM %>% arrange(desc(T)) %>% transmute(X = X - NX * NC_ARM_HW, Y = Y - NY * NC_ARM_HW)
-  ) %>%
-    mutate(GROUP = "ARM")
-)
-
-NC_REACHES <- bind_rows(
-  NC_ARM_REACH %>% transmute(GROUP = "TEAL", X, Y, COLOUR = "#468892", LTY = "solid"),
-  bind_rows(NC_CONFLUENCE, NC_JUNCTION) %>% transmute(GROUP = "CONNECTOR", X, Y, COLOUR = "#FF3BD5", LTY = "11"),
-  tibble(GROUP = "MINT", X = c(0, NC_JUNCTION$X), Y = NC_MAIN_Y, COLOUR = "#74F3D3", LTY = "solid"),
-  tibble(GROUP = "PEACH", X = c(NC_JUNCTION$X, NC_W), Y = NC_MAIN_Y, COLOUR = "#FDC067", LTY = "solid")
-)
-
-NC_ENDS <- bind_rows(NC_CONFLUENCE, NC_JUNCTION) %>%
-  dplyr::select(X, Y)
-
-NC_NODES <- bind_rows(
-  NC_ARM_REACH %>%
-    slice_min(abs(S - max(S) / 2), n = 1) %>%
-    transmute(NODE = "TEAL", X, Y, R = NC_NODE_R, COLOUR = "#468892"),
-  tribble(
-    ~NODE,           ~X,                          ~Y,                              ~R,        ~COLOUR,
-    "UPSTREAM_ARM",  NC_ARM_U[1] * NC_W,          NC_H,                            0,         NA,
-    "UPSTREAM_MAIN", 0,                           NC_MAIN_Y,                       0,         NA,
-    "DOWNSTREAM",    NC_W,                        NC_MAIN_Y,                       0,         NA,
-    "MINT",          NC_JUNCTION$X / 2,           NC_MAIN_Y,                       NC_NODE_R, "#74F3D3",
-    "CONNECTOR",     NC_JUNCTION$X,               (NC_CONFLUENCE$Y + NC_MAIN_Y) / 2, NC_NODE_R, "#FF3BD5",
-    "PEACH",         (NC_JUNCTION$X + NC_W) / 2,  NC_MAIN_Y,                       NC_NODE_R, "#FDC067"
-  )
-)
-
-NC_LINKS <- tribble(
-  ~FROM,           ~TO,
-  "UPSTREAM_ARM",  "TEAL",
-  "UPSTREAM_MAIN", "MINT",
-  "TEAL",          "CONNECTOR",
-  "CONNECTOR",     "PEACH",
-  "MINT",          "PEACH",
-  "PEACH",         "DOWNSTREAM"
-) %>%
-  left_join(dplyr::select(NC_NODES, FROM = NODE, X, Y, R_FROM = R), by = "FROM") %>%
-  left_join(dplyr::select(NC_NODES, TO = NODE, XEND = X, YEND = Y, R_TO = R), by = "TO") %>%
-  mutate(
-    THETA = atan2(YEND - Y, XEND - X),
-    GAP   = if_else(R_TO > 0, R_TO + .2, 0),
-    X     = X + R_FROM * cos(THETA),
-    Y     = Y + R_FROM * sin(THETA),
-    XEND  = XEND - GAP * cos(THETA),
-    YEND  = YEND - GAP * sin(THETA)
-  )
-
-NC_THEME <- theme(
-  plot.title       = element_text(size = 8, color = "grey40", face = "bold"),
-  strip.text       = element_text(size = 8, color = "grey40", face = "bold"),
-  axis.text        = element_blank(),
-  axis.ticks       = element_blank(),
-  axis.title       = element_blank(),
-  panel.grid       = element_blank(),
-  plot.background  = element_rect(fill = "transparent", color = NA),
-  plot.margin      = margin(0, 0, 0, 0),
-  panel.widths     = unit(PANEL_MM, "mm"),
-  panel.heights    = unit(PANEL_MM, "mm")
-)
-
-P_NC_REACHES <- ggplot(tibble(STRIP = "Reaches")) +
-  geom_polygon(data = NC_CHANNEL, aes(x = X, y = Y, group = GROUP), fill = "grey80") +
-  geom_path(data = NC_REACHES, aes(x = X, y = Y, group = GROUP, colour = COLOUR, linetype = LTY), linewidth = .45 * NC_S, lineend = "butt") +
-  geom_point(data = NC_ENDS, aes(x = X, y = Y), colour = "#4D4D4D", size = .55 * NC_S, stroke = 0) +
-  scale_colour_identity() +
-  scale_linetype_identity() +
-  coord_cartesian(xlim = c(0, NC_W), ylim = c(0, NC_H), expand = FALSE) +
-  facet_wrap(~STRIP) +
-  NC_THEME +
-  labs(title = "A")
-
-P_NC_NETWORK <- ggplot(tibble(STRIP = "Network")) +
-  geom_polygon(data = NC_CHANNEL, aes(x = X, y = Y, group = GROUP), fill = "grey80") +
-  geom_segment(data = NC_LINKS, aes(x = X, y = Y, xend = XEND, yend = YEND), colour = "#4D4D4D", linewidth = .15 * NC_S, arrow = arrow(length = unit(.4 * NC_S, "mm"), angle = 25, type = "closed")) +
-  geom_point(data = filter(NC_NODES, R > 0), aes(x = X, y = Y, colour = COLOUR), size = 1.6 * NC_S) +
-  scale_colour_identity() +
-  coord_cartesian(xlim = c(0, NC_W), ylim = c(0, NC_H), expand = FALSE) +
-  facet_wrap(~STRIP) +
-  NC_THEME +
-  labs(title = "B")
-
-P_NC <- pair_plot(P_NC_REACHES, P_NC_NETWORK)
-
-ggsave(P_NC$PLOT, filename= "./PLOTS/NETWORK.png", width= 174, height= P_NC$HEIGHT, unit= "mm", dpi = 600)
-
 ### VALIDATION ####
 
 VALIDATION <- VALIDATION %>%
@@ -4465,6 +4526,7 @@ grid.draw(P_VALIDATION)
 dev.off()
 
 ## CONCEPTIONAL ####
+### WORKFLOW ####
 
 EQ_PT <- 7
 
@@ -5158,6 +5220,130 @@ FIG_WORKFLOW <- ggplot() +
   theme(plot.background = element_rect(fill = "white", colour = NA))
 
 ggsave("./PLOTS/CONCEPT.png", FIG_WORKFLOW, width = FIG_W, height = FIG_H, units = "mm", dpi = 300)
+
+### NETWORK ####
+
+NC_W       <- 10.4
+NC_H       <- 10.4
+NC_S       <- PANEL_MM / NC_W
+NC_MAIN_HW <- 2.8
+NC_MAIN_Y  <- NC_MAIN_HW + .8
+NC_ARM_HW  <- .95
+NC_ARM_U   <- c(.24, .24, .42, .64)
+NC_ARM_V   <- c(1, .72, .5, NC_MAIN_Y / NC_H)
+NC_NODE_R  <- .8
+
+NC_ARM <- tibble(T = seq(0, 1, length.out = 200)) %>%
+  mutate(
+    X   = ((1 - T)^3 * NC_ARM_U[1] + 3 * (1 - T)^2 * T * NC_ARM_U[2] + 3 * (1 - T) * T^2 * NC_ARM_U[3] + T^3 * NC_ARM_U[4]) * NC_W,
+    Y   = ((1 - T)^3 * NC_ARM_V[1] + 3 * (1 - T)^2 * T * NC_ARM_V[2] + 3 * (1 - T) * T^2 * NC_ARM_V[3] + T^3 * NC_ARM_V[4]) * NC_H,
+    DX  = (3 * (1 - T)^2 * (NC_ARM_U[2] - NC_ARM_U[1]) + 6 * (1 - T) * T * (NC_ARM_U[3] - NC_ARM_U[2]) + 3 * T^2 * (NC_ARM_U[4] - NC_ARM_U[3])) * NC_W,
+    DY  = (3 * (1 - T)^2 * (NC_ARM_V[2] - NC_ARM_V[1]) + 6 * (1 - T) * T * (NC_ARM_V[3] - NC_ARM_V[2]) + 3 * T^2 * (NC_ARM_V[4] - NC_ARM_V[3])) * NC_H,
+    LEN = sqrt(DX^2 + DY^2),
+    NX  = -DY / LEN,
+    NY  = DX / LEN
+  )
+
+NC_ARM_REACH <- NC_ARM %>%
+  filter(Y >= NC_MAIN_Y + NC_MAIN_HW) %>%
+  mutate(S = cumsum(c(0, sqrt(diff(X)^2 + diff(Y)^2))))
+
+NC_CONFLUENCE <- NC_ARM_REACH %>%
+  slice_tail(n = 1)
+
+NC_JUNCTION <- tibble(X = NC_CONFLUENCE$X, Y = NC_MAIN_Y)
+
+NC_CHANNEL <- bind_rows(
+  tibble(GROUP = "MAIN", X = c(0, NC_W, NC_W, 0), Y = NC_MAIN_Y + c(-1, -1, 1, 1) * NC_MAIN_HW),
+  bind_rows(
+    NC_ARM %>% transmute(X = X + NX * NC_ARM_HW, Y = Y + NY * NC_ARM_HW),
+    NC_ARM %>% arrange(desc(T)) %>% transmute(X = X - NX * NC_ARM_HW, Y = Y - NY * NC_ARM_HW)
+  ) %>%
+    mutate(GROUP = "ARM")
+)
+
+NC_REACHES <- bind_rows(
+  NC_ARM_REACH %>% transmute(GROUP = "TEAL", X, Y, COLOUR = "#468892", LTY = "solid"),
+  bind_rows(NC_CONFLUENCE, NC_JUNCTION) %>% transmute(GROUP = "CONNECTOR", X, Y, COLOUR = "#FF3BD5", LTY = "11"),
+  tibble(GROUP = "MINT", X = c(0, NC_JUNCTION$X), Y = NC_MAIN_Y, COLOUR = "#74F3D3", LTY = "solid"),
+  tibble(GROUP = "PEACH", X = c(NC_JUNCTION$X, NC_W), Y = NC_MAIN_Y, COLOUR = "#FDC067", LTY = "solid")
+)
+
+NC_ENDS <- bind_rows(NC_CONFLUENCE, NC_JUNCTION) %>%
+  dplyr::select(X, Y)
+
+NC_NODES <- bind_rows(
+  NC_ARM_REACH %>%
+    slice_min(abs(S - max(S) / 2), n = 1) %>%
+    transmute(NODE = "TEAL", X, Y, R = NC_NODE_R, COLOUR = "#468892"),
+  tribble(
+    ~NODE,           ~X,                          ~Y,                              ~R,        ~COLOUR,
+    "UPSTREAM_ARM",  NC_ARM_U[1] * NC_W,          NC_H,                            0,         NA,
+    "UPSTREAM_MAIN", 0,                           NC_MAIN_Y,                       0,         NA,
+    "DOWNSTREAM",    NC_W,                        NC_MAIN_Y,                       0,         NA,
+    "MINT",          NC_JUNCTION$X / 2,           NC_MAIN_Y,                       NC_NODE_R, "#74F3D3",
+    "CONNECTOR",     NC_JUNCTION$X,               (NC_CONFLUENCE$Y + NC_MAIN_Y) / 2, NC_NODE_R, "#FF3BD5",
+    "PEACH",         (NC_JUNCTION$X + NC_W) / 2,  NC_MAIN_Y,                       NC_NODE_R, "#FDC067"
+  )
+)
+
+NC_LINKS <- tribble(
+  ~FROM,           ~TO,
+  "UPSTREAM_ARM",  "TEAL",
+  "UPSTREAM_MAIN", "MINT",
+  "TEAL",          "CONNECTOR",
+  "CONNECTOR",     "PEACH",
+  "MINT",          "PEACH",
+  "PEACH",         "DOWNSTREAM"
+) %>%
+  left_join(dplyr::select(NC_NODES, FROM = NODE, X, Y, R_FROM = R), by = "FROM") %>%
+  left_join(dplyr::select(NC_NODES, TO = NODE, XEND = X, YEND = Y, R_TO = R), by = "TO") %>%
+  mutate(
+    THETA = atan2(YEND - Y, XEND - X),
+    GAP   = if_else(R_TO > 0, R_TO + .2, 0),
+    X     = X + R_FROM * cos(THETA),
+    Y     = Y + R_FROM * sin(THETA),
+    XEND  = XEND - GAP * cos(THETA),
+    YEND  = YEND - GAP * sin(THETA)
+  )
+
+NC_THEME <- theme(
+  plot.title       = element_text(size = 8, color = "grey40", face = "bold"),
+  strip.text       = element_text(size = 8, color = "grey40", face = "bold"),
+  axis.text        = element_blank(),
+  axis.ticks       = element_blank(),
+  axis.title       = element_blank(),
+  panel.grid       = element_blank(),
+  plot.background  = element_rect(fill = "transparent", color = NA),
+  plot.margin      = margin(0, 0, 0, 0),
+  panel.widths     = unit(PANEL_MM, "mm"),
+  panel.heights    = unit(PANEL_MM, "mm")
+)
+
+P_NC_REACHES <- ggplot(tibble(STRIP = "Reaches")) +
+  geom_polygon(data = NC_CHANNEL, aes(x = X, y = Y, group = GROUP), fill = "grey80") +
+  geom_path(data = NC_REACHES, aes(x = X, y = Y, group = GROUP, colour = COLOUR, linetype = LTY), linewidth = .45 * NC_S, lineend = "butt") +
+  geom_point(data = NC_ENDS, aes(x = X, y = Y), colour = "#4D4D4D", size = .55 * NC_S, stroke = 0) +
+  scale_colour_identity() +
+  scale_linetype_identity() +
+  coord_cartesian(xlim = c(0, NC_W), ylim = c(0, NC_H), expand = FALSE) +
+  facet_wrap(~STRIP) +
+  NC_THEME +
+  labs(title = "A")
+
+P_NC_NETWORK <- ggplot(tibble(STRIP = "Network")) +
+  geom_polygon(data = NC_CHANNEL, aes(x = X, y = Y, group = GROUP), fill = "grey80") +
+  geom_segment(data = NC_LINKS, aes(x = X, y = Y, xend = XEND, yend = YEND), colour = "#4D4D4D", linewidth = .15 * NC_S, arrow = arrow(length = unit(.4 * NC_S, "mm"), angle = 25, type = "closed")) +
+  geom_point(data = filter(NC_NODES, R > 0), aes(x = X, y = Y, colour = COLOUR), size = 1.6 * NC_S) +
+  scale_colour_identity() +
+  coord_cartesian(xlim = c(0, NC_W), ylim = c(0, NC_H), expand = FALSE) +
+  facet_wrap(~STRIP) +
+  NC_THEME +
+  labs(title = "B")
+
+P_NC <- pair_plot(P_NC_REACHES, P_NC_NETWORK)
+
+ggsave(P_NC$PLOT, filename= "./PLOTS/NETWORK.png", width= 174, height= P_NC$HEIGHT, unit= "mm", dpi = 600)
 
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # ~~~~~~ ><{{{°> ~~~~~ ####
