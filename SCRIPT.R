@@ -2653,7 +2653,7 @@ TIMELINE <- tribble(
   1817,  "Unregulated",                              4.7,
   1857,  "Regulation onset",                         56.3,
   1875,  "First sections regulated",                 65.6,
-  1910,  "HQ1 regulation",                           66.5,
+  1910,  "HQ1 regulation",                           86.5,
   1965,  ">HQ1 regulation (except east of Vienna)",  92.2,
   1996,  "Max. regulation",                          93.8,
   2022,  "Restoration ongoing",                      90.3
