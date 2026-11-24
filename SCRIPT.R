@@ -280,7 +280,7 @@ pair_plot <- function(PLOT_A, PLOT_B, GAP = 10, FIG_W = 174, PAD = 1) {
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # PREP DATA ####
 
-setwd(this.path::this.dir())
+setwd(tryCatch(dirname(rstudioapi::getSourceEditorContext()$path), error = function(e) this.path::this.dir()))
 
 ## SC (WEIGHTS) ####
 
@@ -3594,20 +3594,12 @@ WB_TYP_AREA$WB_TYPE <- factor(WB_TYP_AREA$WB_TYPE,
                                          "tri_0",
                                          "art_0"))
 
+CCI_LOG_SCALE <- 50
+
 CCI_MASTER_PLOT <- CCI_MASTER %>%
   group_by(DISP, SC) %>%
-  mutate(NUM = (NUM/max(NUM))*100) %>%
-  ungroup()
-
-CCI_BASELINE   <- CCI_MASTER_PLOT %>%
-  filter(YEAR == 1817) %>%
-  dplyr::select(NUM, DISP, SC) %>%
-  mutate(NUM = 100 - NUM) %>%
-  rename(NUM_BASE = NUM)
-
-CCI_MASTER_PLOT <- CCI_MASTER_PLOT %>%
-  left_join(CCI_BASELINE, by = c("DISP", "SC")) %>%
-  mutate(NUM = NUM + NUM_BASE) %>%
+  mutate(NUM = 100 + CCI_LOG_SCALE * log10(NUM / NUM[YEAR == 1817])) %>%
+  ungroup() %>%
   left_join(SIGNIFICANCE %>%
               dplyr::select(DISP, SC, P),
             by = c("DISP", "SC")) %>%
@@ -3629,9 +3621,14 @@ P_CCI <- ggplot(CCI_MASTER_PLOT) +
   geom_area(data = WB_TYP_AREA, aes(x = YEAR, y = AREA, fill = WB_TYPE), alpha = .5) +
   scale_x_continuous(breaks = c(1817, 1857, 1875, 1910, 1965, 1996, 2022),
                      labels = as.character(c(1817, 1857, 1875, 1910, 1965, 1996, 2022))) +
-  scale_y_continuous(name = expression(paste(bold("Deviation from baseline"), " [%]")),
-                     breaks = c(   0,  50, 100, 150, 200),
-                     labels = c(-100, -50,   0,  50, 100)) +
+  scale_y_continuous(name = expression(paste(bold("CCI"), " [factor of baseline]")),
+                     limits = c(0, 200),
+                     breaks = 100 + CCI_LOG_SCALE * log10(c(0.01, 0.1, 1, 10, 100)),
+                     labels = paste0("×", c("0.01", "0.1", "1", "10", "100")),
+                     sec.axis = sec_axis(~ .,
+                                         name   = expression(paste(bold("Habitat area"), " [deviation from baseline, %]")),
+                                         breaks = c(   0,  50, 100),
+                                         labels = c(-100, -50,   0))) +
   scale_fill_manual(values = c("#468892", "#1CAC1C",
                                "#74F3D3", "#12D09E",
                                "#751C6D",
@@ -3681,12 +3678,14 @@ P_CCI <- ggplot(CCI_MASTER_PLOT) +
     legend.background = element_rect(fill = "white", color = NA),
     legend.key        = element_rect(fill = "white", color = NA),
     legend.margin     = margin(0,0,0,0),
+    legend.box.spacing = unit(8, "mm"),
     plot.margin       = margin(0, 0, 0, 0),
     axis.text.y       = element_text(size = 6, color = "grey40"),
     axis.text.x       = element_text(size = 6, color = "grey40", angle = 45, vjust = 1.1, hjust = 1.05),
     axis.ticks        = element_line(color = "grey40"),
     axis.title.x      = element_blank(),
     axis.title.y      = element_text(margin = margin(r = 6), face = "bold", size = 8, color = "grey40"),
+    axis.title.y.right = element_text(margin = margin(l = 6), face = "bold", size = 8, color = "grey40"),
     panel.grid.major  = element_line(linewidth = .4),
     panel.grid.minor  = element_line(linewidth = .2),
     aspect.ratio      = 1
@@ -3703,7 +3702,7 @@ P_CCI <- ggplot(CCI_MASTER_PLOT) +
 
   )
 
-ggsave(P_CCI, filename= "./PLOTS/CCI.png", width= 174, height= 144, unit= "mm", dpi = 600)
+ggsave(P_CCI, filename= "./PLOTS/CCI.png", width= 174, height= 127, unit= "mm", dpi = 600)
 
 ### CC ####
 
