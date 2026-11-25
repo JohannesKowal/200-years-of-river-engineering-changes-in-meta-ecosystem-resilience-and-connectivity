@@ -275,7 +275,14 @@ pair_plot <- function(PLOT_A, PLOT_B, GAP = 10, FIG_W = 174, PAD = 1) {
   list(PLOT = P, HEIGHT = FIG_H)
 }
 
-# ~~~~~~~~~~~~~~~~~~~~ ####       
+PNG_TO_PDF <- function(PNG_FILE, WIDTH, HEIGHT) {
+  IMG <- png::readPNG(PNG_FILE)
+  cairo_pdf(sub("\\.png$", ".pdf", PNG_FILE), width = WIDTH / 25.4, height = HEIGHT / 25.4)
+  grid::grid.raster(IMG, interpolate = FALSE)
+  invisible(dev.off())
+}
+
+# ~~~~~~~~~~~~~~~~~~~~ ####
 # ~~~~~~ ><{{{°> ~~~~~ ####
 # ~~~~~~~~~~~~~~~~~~~~ ####       
 # PREP DATA ####
@@ -3067,6 +3074,8 @@ P_SITE <- ggplot() +
   )
 
 ggsave(P_SITE, filename = "./PLOTS/STUDY_SITE.png", width = FIG_W, height = FIG_H, unit = "mm", dpi = 600)
+PNG_TO_PDF("./PLOTS/STUDY_SITE.png", WIDTH = FIG_W, HEIGHT = FIG_H)
+
 ### CC ####
 
 YEAR_LEVELS                     <- sort(unique(RCI_MASTER$YEAR))
@@ -3347,6 +3356,7 @@ P_CC <- P_CC_1 +
   )
 
 ggsave(P_CC, filename= "./PLOTS/CC_SPATIAL.png", width= 178, height= 200, unit= "mm", dpi = 600)
+PNG_TO_PDF("./PLOTS/CC_SPATIAL.png", WIDTH = 178, HEIGHT = 200)
 
 ### HABITATS (SI) ####
 
@@ -3703,6 +3713,7 @@ P_CCI <- ggplot(CCI_MASTER_PLOT) +
   )
 
 ggsave(P_CCI, filename= "./PLOTS/CCI.png", width= 174, height= 127, unit= "mm", dpi = 600)
+ggsave(P_CCI, filename= "./PLOTS/CCI.pdf", width= 174, height= 127, unit= "mm", device = cairo_pdf)
 
 ### CC ####
 
@@ -3871,6 +3882,7 @@ P_CC <- ggpubr::ggarrange(P_CC_1, P_CC_2, LEGEND, ncol = 1, heights = c(.9, 1, .
         plot.margin     = margin(-3, 0, -8, 0))
 
 ggsave(P_CC, filename= "./PLOTS/CC.png", width= 174, height= 128, unit= "mm", dpi = 600)
+ggsave(P_CC, filename= "./PLOTS/CC.pdf", width= 174, height= 128, unit= "mm", device = cairo_pdf)
 
 ### ROBUSTNESS ####
 
@@ -4028,6 +4040,7 @@ RESILIENCE <- LEGEND_YEARS / (P_ROB + P_DISS + P_MOD) +
   plot_layout(heights = c(.1, 1))
 
 ggsave(RESILIENCE, filename= "./PLOTS/RESILIENCE.png", width= 174, height= 72, unit= "mm", dpi = 600, bg = "white")
+ggsave(RESILIENCE, filename= "./PLOTS/RESILIENCE.pdf", width= 174, height= 72, unit= "mm", bg = "white", device = cairo_pdf)
 
 ### SC ####
 
@@ -5229,6 +5242,7 @@ FIG_WORKFLOW <- ggplot() +
   theme(plot.background = element_rect(fill = "white", colour = NA))
 
 ggsave("./PLOTS/CONCEPT.png", FIG_WORKFLOW, width = FIG_W, height = FIG_H, units = "mm", dpi = 300)
+ggsave("./PLOTS/CONCEPT.pdf", FIG_WORKFLOW, width = FIG_W, height = FIG_H, units = "mm", device = cairo_pdf)
 
 ### NETWORK ####
 
