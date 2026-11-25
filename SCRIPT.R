@@ -3885,6 +3885,17 @@ ROBUSTNESS_PLOT <- ROBUSTNESS %>%
   mutate(INT_LOW = DIST_MEAN - DIST_SD,
          INT_UP  = DIST_MEAN + DIST_SD)
 
+# Share of connected node pairs (paths found relative to maximum possible paths)
+ROBUSTNESS_REACH <- ROBUSTNESS %>%
+  drop_na(DIST_MEAN) %>%
+  mutate(REACH_SHARE = (DIST_SUM / DIST_MEAN) / NR_PATHS) %>%
+  group_by(YEAR, REMOVED) %>%
+  summarise(NODES_LEFT  = mean(NODES_LEFT),
+            REACH_SHARE = mean(REACH_SHARE),
+            .groups = "drop")
+
+write_csv(ROBUSTNESS_REACH, "./RESULTS/ROBUSTNESS_REACH.csv")
+
 P_ROB <- ggplot(ROBUSTNESS_PLOT,
                 aes(x     = REMOVED,
                     y     = log(DIST_MEAN + 1),
