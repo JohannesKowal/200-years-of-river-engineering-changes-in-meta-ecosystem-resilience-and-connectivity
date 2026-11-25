@@ -1,0 +1,58 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite it as below."
+type: dataset
+title: "Data and code for: Two centuries of river engineering: changes in meta-ecosystem resilience and connectivity"
+abstract: >-
+  Code and data for the analysis of changes in functional habitat connectivity
+  and meta-ecosystem resilience along a 150 km section of the Danube (Austria)
+  and its floodplains between 1817 and 2022, based on a time series of habitat
+  networks, reach and catchment connectivity indices, connectivity clusters and
+  multilayer networks.
+authors:
+  - family-names: Kowal
+    given-names: Johannes L.
+    affiliation: "Institute of Hydrobiology and Aquatic Ecosystem Management, BOKU University, Vienna, Austria"
+  - family-names: Gross
+    given-names: Sarah M.
+    affiliation: "Institute of Hydrobiology and Aquatic Ecosystem Management, BOKU University, Vienna, Austria"
+  - family-names: Haidvogl
+    given-names: Gertrud
+    affiliation: "Institute of Hydrobiology and Aquatic Ecosystem Management, BOKU University, Vienna, Austria"
+  - family-names: Hein
+    given-names: Thomas
+    affiliation: "Institute of Hydrobiology and Aquatic Ecosystem Management, BOKU University, Vienna, Austria"
+  - family-names: Hohensinner
+    given-names: Severin
+    affiliation: "Institute of Hydrobiology and Aquatic Ecosystem Management, BOKU University, Vienna, Austria"
+  - family-names: Funk
+    given-names: Andrea
+    affiliation: "Institute of Hydrobiology and Aquatic Ecosystem Management, BOKU University, Vienna, Austria"
+license: CC-BY-4.0
+repository-code: "https://github.com/JohannesKowal/200-years-of-river-engineering-changes-in-meta-ecosystem-resilience-and-connectivity"
+keywords:
+  - river engineering
+  - floodplain
+  - Danube
+  - habitat connectivity
+  - meta-ecosystem
+  - resilience
+  - network analysis
+references:
+  - type: article
+    title: "200 years of river engineering: changes in meta-ecosystem resilience and connectivity"
+    authors:
+      - family-names: Kowal
+        given-names: Johannes L.
+      - family-names: Gross
+        given-names: Sarah M.
+      - family-names: Haidvogl
+        given-names: Gertrud
+      - family-names: Hein
+        given-names: Thomas
+      - family-names: Hohensinner
+        given-names: Severin
+      - family-names: Funk
+        given-names: Andrea
+    year: 2026
+    journal: bioRxiv
+    doi: 10.64898/2026.07.03.736339
