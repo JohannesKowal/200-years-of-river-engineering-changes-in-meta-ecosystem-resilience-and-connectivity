@@ -9,7 +9,7 @@ Code and data for the analysis of changes in functional habitat connectivity and
 
 - **Manuscript:** Kowal et al. (2026), *Two centuries of river engineering: changes in meta-ecosystem resilience and connectivity*, in revision.
 - **Preprint:** Kowal et al. (2026), *200 years of river engineering: changes in meta-ecosystem resilience and connectivity*, bioRxiv, https://doi.org/10.64898/2026.07.03.736339
-- **Data and code (all versions):** https://doi.org/10.5281/zenodo.21165310
+- **Data and code (all versions):** https://doi.org/10.5281/zenodo.24536693
 
 Data and code are published on Zenodo under the Creative Commons Attribution 4.0 International license (CC BY 4.0).
 
