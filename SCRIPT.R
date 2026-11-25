@@ -3885,7 +3885,6 @@ ROBUSTNESS_PLOT <- ROBUSTNESS %>%
   mutate(INT_LOW = DIST_MEAN - DIST_SD,
          INT_UP  = DIST_MEAN + DIST_SD)
 
-# Share of connected node pairs (paths found relative to maximum possible paths)
 ROBUSTNESS_REACH <- ROBUSTNESS %>%
   drop_na(DIST_MEAN) %>%
   mutate(REACH_SHARE = (DIST_SUM / DIST_MEAN) / NR_PATHS) %>%
