@@ -11,7 +11,7 @@ Code and data for the analysis of changes in functional habitat connectivity and
 - **Preprint:** Kowal et al. (2026), *200 years of river engineering: changes in meta-ecosystem resilience and connectivity*, bioRxiv, https://doi.org/10.64898/2026.07.03.736339
 - **Data and code (all versions):** https://doi.org/10.5281/zenodo.24536693
 
-Data and code are published on Zenodo under the Creative Commons Attribution 4.0 International license (CC BY 4.0).
+Data and code are published on Zenodo under the Creative Commons Attribution 4.0 International license (CC BY 4.0). Third party data are listed under [Third party data](#third-party-data) and remain subject to the terms of their providers.
 
 ## Overview
 
@@ -33,7 +33,7 @@ Data and code are published on Zenodo under the Creative Commons Attribution 4.0
 | `LINKS/` | Links between nodes per year (`LINKS_XXXX.csv`) |
 | `WEIGHTS/` | Habitat suitability of taxa, conversion of habitat types and reach widths |
 | `SAMPLES/` | Presence and absence records of taxa used for validation |
-| `RESULTS/` | Saved results of the analysis (indices, validation, clusters, resilience indicators) |
+| `RESULTS/` | Saved results of the analysis (indices, validation, clusters, resilience indicators, habitat areas) |
 | `PLOTS/` | Figures (main figures also as PDF) and spatial layers used for the maps |
 | `ICONS/` | Icons of the dispersal modes used in the figures |
 | `PROGRESS_LOG_ROBUSTNESS.txt` | Progress log written during the robustness analysis |
@@ -209,9 +209,35 @@ Dissimilarity (`DISSIMILARITY`) between pairs of layers (`CONFIG_1`, `CONFIG_2`)
 
 Normalized modularity of the connectivity clusters (`MD`) per year (`YEAR`).
 
+### RESULTS/HABITAT_AREA.csv
+
+Total length and area of reaches per habitat type, year and impoundment.
+
+| Column | Description |
+|---|---|
+| `YEAR` | Year |
+| `WB_TYPE` | Habitat type |
+| `IMP` | Impounded (1) or not impounded (0) |
+| `LENGTH_KM` | Total reach length [km] |
+| `AREA_HA` | Total habitat area, calculated as reach length times average width [ha] |
+
+## Third party data
+
+- **Icons (`ICONS/`):** silhouettes from [PhyloPic](https://www.phylopic.org), public domain (CC0 1.0). *Myriophyllum spicatum* and *Anodonta cygnea* by Ferran Sayol, *Tricolia pullus* by Tauana J. Cunha, *Cyprinus carpio* and *Luciobarbus graellsii* by Carlos Cano-Barbacil, *Macromia splendens* by Lisa Nicvert.
+- **Rivers and lakes (`PLOTS/RIVERS`, `PLOTS/LAKES`):** 3rd Austrian National River Basin Management Plan (NGP 2021; BMLRT 2022).
+- **Barriers (`PLOTS/BARRIERS`):** mapped based on the NGP 2021 (BMLRT 2022) and Kowal et al. (2025).
+- **Vienna boundary (`PLOTS/VIENNA_BOUNDARY`):** City of Vienna, Bezirksgrenzen Wien, [data.gv.at](https://www.data.gv.at/katalog/datasets/2ee6b8bf-6292-413c-bb8b-bd22dbb2ad4b).
+- **Elevation (downloaded by the script with elevatr):** SRTM data courtesy of the U.S. Geological Survey, accessed via Terrain Tiles (Hollister et al. 2023).
+- **Country boundaries (downloaded by the script with giscoR):** © EuroGeographics for the administrative boundaries.
+- **Danube basin (downloaded by the script):** HydroBASINS (Lehner and Grill 2013).
+
 ## References
 
 - Amoros C, Roux AL, Reygrobellet JL, Bravard JP, Pautou G (1987) A method for applied ecological studies of fluvial hydrosystems. Regulated Rivers: Research and Management 1(1), 17 to 36. https://doi.org/10.1002/rrr.3450010104
 - Baldan D, Cunillera-Montcusí D, Funk A, Hein T (2022) Introducing riverconn: an R package to assess river connectivity indices. Environmental Modelling and Software 156, 105470. https://doi.org/10.1016/j.envsoft.2022.105470
+- BMLRT (2022) Nationaler Gewässerbewirtschaftungsplan 2021. Bundesministerium für Landwirtschaft, Regionen und Tourismus, Vienna. GZ 2022-0.270.788. https://www.bmluk.gv.at/themen/wasser/wisa/ngp/ngp-2021.html
 - Chovanec A, Waringer J, Straif M, Graf W, Reckendorfer W, Waringer-Löschenkohl A, Waidbacher H, Schultz H (2005) The Floodplain Index: a new approach for assessing the ecological status of river/floodplain systems according to the EU Water Framework Directive. Archiv für Hydrobiologie, Large Rivers 15, 169 to 185.
 - Hohensinner S, Jungwirth M, Muhar S, Schmutz S (2011) Spatio-temporal habitat dynamics in a changing Danube River landscape 1812 to 2006. River Research and Applications 27(8), 939 to 955. https://doi.org/10.1002/rra.1407
+- Hollister J, Shah T, Nowosad J, Robitaille A, Beck M, Johnson M (2023) elevatr: Access Elevation Data from Various APIs. R package version 0.99.0. https://doi.org/10.5281/zenodo.8335450
+- Kowal JL, Haidvogl G, Funk A, Schützenhofer J, Branco P, Ferreira MT, Meulenbroek P, Schinegger R, Hein T (2025) Over 100 years of longitudinal connectivity changes from the perspective of a migratory fish species. Ecological Indicators 175, 113436. https://doi.org/10.1016/j.ecolind.2025.113436
+- Lehner B, Grill G (2013) Global river hydrography and network routing: baseline data and new approaches to study the world's large river systems. Hydrological Processes 27(15), 2171 to 2186. https://doi.org/10.1002/hyp.9740
