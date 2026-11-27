@@ -3565,6 +3565,17 @@ WB_TYP_AREA <- rbind(
 
 )
 
+HABITAT_AREA <- WB_TYP_AREA %>%
+  st_drop_geometry() %>%
+  filter(WB_TYPE != "CO") %>%
+  group_by(YEAR, WB_TYPE, IMP) %>%
+  summarise(LENGTH_KM = round(sum(LENGTH) / 1000, 1),
+            AREA_HA   = round(sum(WIDTH * LENGTH) / 10000, 1)) %>%
+  ungroup() %>%
+  arrange(YEAR, WB_TYPE, IMP)
+
+write_csv(HABITAT_AREA, "./RESULTS/HABITAT_AREA.csv")
+
 WB_TYP_AREA <- WB_TYP_AREA %>%
   st_drop_geometry() %>%
   filter(WB_TYPE != "CO") %>%
